@@ -5,7 +5,7 @@ firmware version in `sw/VERSION`; the release workflow publishes the section
 for that version in
 [christmas-star-releases](https://github.com/unary-fi/christmas-star-releases/releases).
 
-## [1.6.0] - Unreleased
+## [1.6.0] - 2026-11-19
 
 ### Comet, a game on the star
 
