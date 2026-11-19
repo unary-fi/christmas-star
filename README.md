@@ -77,7 +77,7 @@ with its own board definition (`christmas_star`). The Android app in
 
    ```powershell
    py -3.12 -m venv .venv
-   .venv\Scripts\pip install west pyserial xmodem pillow pylink-square pytest bleak aiohttp cryptography intelhex click cbor2
+   .venv\Scripts\pip install west pyserial xmodem pillow pylink-square pytest bleak cryptography intelhex click cbor2
    .venv\Scripts\west init -l sw
    .venv\Scripts\west update
    .venv\Scripts\pip install -r zephyr\scripts\requirements-base.txt
@@ -90,8 +90,9 @@ with its own board definition (`christmas_star`). The Android app in
 5. Developer key (optional, for your own builds only): put 32 random hex
    digits in `sw/dev_key.txt` (ignored by git), e.g.
    `python -c "import secrets; open('sw/dev_key.txt','w').write(secrets.token_hex(16))"`.
-   Firmware built with it accepts this key on every star; Star Studio and
-   `star_ble.py` read it from the same file. Keep it private, and never
+   Firmware built with it accepts this key on every star; `star_ble.py` reads
+   it from the same file, and Star Studio takes it on its *Developer* page.
+   Keep it private, and never
    publish firmware built with it: anyone could read the key out of the image.
    Published releases are built without one (CI has no key; locally,
    `$env:STAR_NO_DEV_KEY = "1"` before a pristine build leaves it out).
@@ -233,7 +234,7 @@ J-Link (RTT) command line is never locked.
 - The owner can release the star in the app (*Stars* → *Release this star*).
 - Developer mode in the app: tap the title "Christmas Star" seven times and
   enter the developer key; *Stars* then switches freely between all stars.
-  Star Studio always uses the developer key when `sw/dev_key.txt` exists.
+  Star Studio uses the developer key saved on its *Developer* page.
 
 The BM78 accepts one connection at a time, so a star connected to Star Studio
 is not available to a phone until the studio disconnects it.
@@ -271,26 +272,38 @@ The rules are in `sw/src/game/comet_logic.c` (unit-tested), the drawing in
 
 # Star Studio (PC)
 
-Star Studio controls every star in the room from a Windows PC, in the
-browser, with the app's look:
+Star Studio controls every star in the room from a computer, with the app's
+look. It is a web page that talks to the stars itself, with Web Bluetooth:
+nothing to install.
 
-```powershell
-pc\star_studio.cmd
-```
+**Open https://unary-fi.github.io/christmas-star/ in Chrome or Edge** (Windows,
+macOS, ChromeOS, Android; on Linux, Chrome may need
+`chrome://flags/#enable-web-bluetooth`). Firefox and Safari have no Web
+Bluetooth.
 
-The launcher uses the project's `.venv` (which has `bleak` and `aiohttp`); with
-another Python, install those two packages first.
-
-- Left: the stars nearby, with their state and signal. Click to connect and
-  select; Ctrl+click selects several stars, which then all get the same
-  commands, colours, pictures and effects.
+- Left: your stars. *Add star* opens the browser's Bluetooth chooser; pick a
+  star and it connects. Where the browser remembers permissions, the stars
+  come back on the next visit. Click to select; Ctrl+click selects several
+  stars, which then all get the same commands, colours, pictures and effects.
+- Stars open with the developer key (*Developer* page, kept in this browser
+  only) or with this browser's own key: a star in its pairing window (shake
+  it for 5 s) pairs with *Pair*, like a phone.
 - *Colour*, *Picture* (photo or video, live or saved to the star) and
   *Effects* work as in the app.
 - *Developer*: a console for every selected star, status and supply, renaming
   (several stars at once get numbered names), pairing, missing LEDs (click an
   LED on the star), the current limit and `.csfx` uploads.
 
-The studio serves its page on `127.0.0.1` only, with a random token in the URL.
+The page is `pc/web` (plain HTML, CSS and JavaScript modules, no build step
+and no libraries), published by `.github/workflows/pages.yml`. To work on it,
+serve it locally (`localhost` counts as secure for Web Bluetooth) and run its
+tests with Node.js:
+
+```powershell
+cd pc\web
+python -m http.server 8000      # then open http://localhost:8000
+node --test tests\
+```
 
 ## Making effects
 

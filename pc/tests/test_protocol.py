@@ -1,6 +1,8 @@
 # Copyright (c) 2024-2026 Tuomas Terho
 # SPDX-License-Identifier: MIT
-"""Tests for Star Studio's protocol pieces and the pairing helpers.
+"""Tests for the star protocol pieces (pc/star_protocol.py) and the pairing helpers.
+
+Star Studio itself runs in the browser; its tests are in pc/web/tests (node --test).
 
     python -m pytest pc/tests sw/tools/tests
 """
@@ -15,7 +17,6 @@ sys.path.insert(0, str(ROOT / "sw" / "tools"))
 
 import star_auth  # noqa: E402
 import star_protocol as sp  # noqa: E402
-from star_studio import parse_state  # noqa: E402
 
 
 def test_crc16_xmodem_check_value():
@@ -90,12 +91,3 @@ def test_parse_hello():
     assert star_auth.parse_hello("ok proto=1 leds=132 fw=1.1")["proto"] == 1
     assert star_auth.parse_hello("locked") is None
 
-
-def test_parse_state_with_spaces():
-    s = parse_state("state effect=flash bright=128 shake=1 speed=100 fps=50 missing=1 cap=655040 "
-                    "flash=My video frames=250 owner=paired name=Living room")
-    assert s["effect"] == "flash" and s["flash"] == "My video" and s["frames"] == "250"
-    assert s["owner"] == "paired" and s["name"] == "Living room"
-    s = parse_state("state effect=rainbow bright=1 shake=0 speed=100 fps=50 missing=0 cap=1 "
-                    "flash=- frames=0 owner=free name=")
-    assert s["flash"] == "" and s["name"] == ""

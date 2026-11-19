@@ -72,6 +72,8 @@ h2 { font-size: 21px; color: var(--gold-soft); }
 .rail-head { display: flex; justify-content: space-between; align-items: center; padding: 0 6px; }
 .star-list { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding: 2px 4px 8px; min-height: 0; flex: 1; }
 .empty { padding: 0 6px; }
+.notice { margin: 0 6px; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(242, 193, 78, 0.45); background: rgba(242, 193, 78, 0.08); color: var(--gold-soft); }
+#devkey { flex: 1; font-family: var(--mono); }
 .rail-foot { display: flex; flex-direction: column; gap: 6px; padding: 10px 6px 0; border-top: 1px solid var(--border); }
 
 .main { display: flex; flex-direction: column; gap: 14px; padding: 18px 22px 22px; min-width: 0; min-height: 0; overflow: auto; }
@@ -115,7 +117,7 @@ button:disabled { opacity: 0.45; cursor: default; }
 .primary.small { padding: 6px 12px; }
 .danger { color: #FF8A8E; border-color: rgba(229, 72, 77, 0.4); }
 .wide { width: 100%; }
-input[type=text], input[type=number], .console-input input {
+input[type=text], input[type=password], input[type=number], .console-input input {
   font: inherit; color: var(--text); background: rgba(0, 0, 0, 0.25);
   border: 1px solid var(--border); border-radius: 10px; padding: 7px 10px; min-width: 0;
 }

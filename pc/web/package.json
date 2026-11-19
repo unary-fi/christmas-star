@@ -1,0 +1,9 @@
+{
+  "name": "star-studio",
+  "private": true,
+  "description": "Star Studio: control Christmas Stars from the browser (Web Bluetooth). No dependencies.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/"
+  }
+}

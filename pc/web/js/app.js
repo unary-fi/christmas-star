@@ -1,7 +1,12 @@
-// Star Studio front end. Talks to pc/star_studio.py over a WebSocket.
+// Copyright (c) 2024-2026 Tuomas Terho
+// SPDX-License-Identifier: MIT
+//
+// Star Studio front end. The stars are reached from the page itself with
+// Web Bluetooth (js/studio.js); this file is the user interface.
 import { StarLayout } from "../star_layout.js";
 import { drawStar, fitCanvas, startSky, StarGeometry, rgbCss } from "./star_canvas.js";
 import { EFFECTS, EffectPreview } from "./effects.js";
+import { Studio, bluetoothAvailable } from "./studio.js";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -10,28 +15,29 @@ const UPLOAD_BYTES_PER_S = 2300; // measured over BLE from Windows
 
 // ---- connection ---------------------------------------------------------------
 
-const params = new URLSearchParams(location.search);
-const token = params.get("t") || sessionStorage.getItem("studio-token") || "";
-sessionStorage.setItem("studio-token", token);
-
-let ws = null;
 let stars = [];
 let devKey = false;
 const selected = new Set(JSON.parse(localStorage.getItem("studio-selected") || "[]"));
 const pending = new Map();
 let nextId = 1;
+let studio = null;
 
-function connectSocket() {
-  ws = new WebSocket(`ws://${location.host}/ws?t=${encodeURIComponent(token)}`);
-  ws.onmessage = (e) => onEvent(JSON.parse(e.data));
-  ws.onclose = () => {
-    toast("error", "Lost the connection to Star Studio. Is star_studio.py still running?");
-    setTimeout(connectSocket, 3000);
-  };
+function startStudio() {
+  if (!bluetoothAvailable()) {
+    $("#no-bluetooth").hidden = false;
+    $("#empty").hidden = true;
+    $("#scan").disabled = true;
+    return;
+  }
+  studio = new Studio(onEvent);
+  onEvent(studio.snapshot());
 }
 
+/** Hand a UI request to the studio (straight away: "scan" needs the click's gesture). */
 function send(op, extra = {}) {
-  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ op, ...extra }));
+  if (!studio) return;
+  const done = studio.handle({ op, ...extra });
+  if (done && done.catch) done.catch((e) => toast("error", e.message || String(e)));
 }
 
 /** Run a command on stars; resolves when every star has answered. */
@@ -100,7 +106,7 @@ function onEvent(m) {
 const byAddress = (a) => stars.find((s) => s.address === a);
 const readyTargets = () => [...selected].filter((a) => byAddress(a)?.status === "ready");
 const primary = () => byAddress(readyTargets()[0]);
-const shortId = (a) => a.replace(/:/g, "").slice(-4);
+const shortId = () => ""; // the browser hides Bluetooth addresses
 
 function saveSelection() {
   localStorage.setItem("studio-selected", JSON.stringify([...selected]));
@@ -111,7 +117,7 @@ function saveSelection() {
 function badge(s) {
   const a = s.info?.access;
   switch (s.status) {
-    case "ready": return a === "dev" ? ["Developer", "dev"] : a === "owner" ? ["Paired with this PC", "ok"] : ["Connected", "ok"];
+    case "ready": return a === "dev" ? ["Developer", "dev"] : a === "owner" ? ["Paired with this browser", "ok"] : ["Connected", "ok"];
     case "locked": return s.info?.pairing === "open" ? ["Ready to pair", "warn"] : ["Paired elsewhere", "warn"];
     case "connecting": return ["Connecting…", ""];
     case "renaming": return ["Renaming…", ""];
@@ -122,6 +128,7 @@ function badge(s) {
 }
 
 function bars(rssi) {
+  if (typeof rssi !== "number") return "";
   const n = rssi > -60 ? 4 : rssi > -70 ? 3 : rssi > -80 ? 2 : 1;
   return `<span class="bars" title="${rssi} dBm">${[4, 7, 10, 12].map((h, i) =>
     `<i style="height:${h}px" class="${i < n ? "on" : ""}"></i>`).join("")}</span>`;
@@ -167,8 +174,9 @@ function renderStars() {
   const names = readyTargets().map((a) => byAddress(a).name);
   $("#target-name").textContent = names.length === 0 ? "No star selected" :
     names.length === 1 ? names[0] : `${names.length} stars: ${names.join(", ")}`;
-  $("#keyinfo").textContent = devKey ? "Developer key loaded: every star can be controlled." :
-    "No developer key: only stars paired with this PC.";
+  $("#keyinfo").textContent = devKey ? "Developer key in this browser: every star can be controlled." :
+    "No developer key: only stars paired with this browser.";
+  $("#devkey-state").textContent = devKey ? "saved in this browser" : "none";
   updateDevPanel();
 }
 
@@ -615,8 +623,8 @@ function updateDevPanel() {
     `effect ${s.effect || "?"}, ${s.fps || "?"} fps, ${s.missing ?? "?"} LEDs missing\n` +
     `stored effect: ${s.flash || "none"} (${s.frames || 0} frames of ${s.cap || "?"})\n\n${p.led || ""}`;
   $("#pair-info").textContent = s.owner === "paired" || i.owner === "paired"
-    ? (i.access === "owner" ? "Paired with this PC." : "Paired with a phone or another PC. Developer access works anyway.")
-    : "Not paired: the next phone or PC to pair becomes its owner.";
+    ? (i.access === "owner" ? "Paired with this browser." : "Paired with a phone or another computer. Developer access works anyway.")
+    : "Not paired: the next phone or browser to pair becomes its owner.";
   if (document.activeElement !== $("#limit")) {
     const m = (p.led || "").match(/limit (\d+)\)/);
     if (m) $("#limit").value = m[1];
@@ -659,19 +667,29 @@ $("#fw-go").onclick = () => {
   }
   b.dataset.confirm = "";
   b.textContent = "Update";
-  const reader = new FileReader();
-  reader.onload = () => send("firmware", {
-    addresses: targets, file: reader.result.split(",")[1], permanent: $("#fw-permanent").checked,
-  });
-  reader.readAsDataURL(f);
+  f.arrayBuffer().then((file) => send("firmware", { addresses: targets, file, permanent: $("#fw-permanent").checked }));
 };
 
 $("#csfx-go").onclick = () => {
   const f = $("#csfx-file").files[0];
   if (!f || !readyTargets().length) return;
-  const reader = new FileReader();
-  reader.onload = () => send("upload", { addresses: readyTargets(), file: reader.result.split(",")[1], play: true });
-  reader.readAsDataURL(f);
+  f.arrayBuffer().then((file) => send("upload", { addresses: readyTargets(), file, play: true }));
+};
+
+$("#devkey-form").onsubmit = (e) => {
+  e.preventDefault();
+  if (!studio) return;
+  if (studio.setDevKey($("#devkey").value)) {
+    $("#devkey").value = "";
+    toast("ok", "Developer key saved in this browser. Reconnect a star to use it.");
+  } else {
+    toast("error", "The developer key is 32 hex digits.");
+  }
+};
+$("#devkey-forget").onclick = () => {
+  if (!studio) return;
+  studio.setDevKey(null);
+  toast("info", "Developer key removed from this browser.");
 };
 
 // ---- progress and toasts ---------------------------------------------------------------
@@ -780,6 +798,6 @@ const startTab = $$(".tab").find((t) => `#${t.dataset.page}` === location.hash);
 if (startTab) startTab.click();
 startSky($("#sky"));
 syncSliders();
-connectSocket();
+startStudio();
 redrawAll();
 requestAnimationFrame(loop);

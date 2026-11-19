@@ -21,11 +21,12 @@
     </header>
 
     <div class="rail-head">
-      <span class="label">Stars nearby</span>
-      <button class="ghost small" id="scan" title="Search again">Search</button>
+      <span class="label">Your stars</span>
+      <button class="primary small" id="scan" title="Choose a star near this computer">Add star</button>
     </div>
     <div id="star-list" class="star-list" role="list"></div>
-    <p id="empty" class="muted small empty">Looking for stars… Make sure they are powered on.</p>
+    <p id="empty" class="muted small empty">Click <b>Add star</b> and choose your star from the list. Make sure it is powered on and not connected to a phone.</p>
+    <p id="no-bluetooth" class="notice small" hidden>Star Studio talks to the stars with Web Bluetooth, which this browser does not have. Open this page in <b>Chrome</b> or <b>Edge</b> on Windows, macOS, ChromeOS or Android. On Linux, Chrome may need <code>chrome://flags/#enable-web-bluetooth</code> turned on.</p>
 
     <footer class="rail-foot">
       <label class="check"><input type="checkbox" id="select-all"> Select all connected</label>
@@ -139,6 +140,12 @@
           <div class="glass card">
             <div class="card-head"><h2>Status</h2><button class="ghost small" id="dev-refresh">Refresh</button></div>
             <pre id="dev-status" class="mono small"></pre>
+          </div>
+
+          <div class="glass card">
+            <div class="card-head"><h2>Developer key</h2><span class="muted small" id="devkey-state"></span></div>
+            <form class="row" id="devkey-form"><input type="text" name="username" value="developer" autocomplete="username" hidden><input type="password" id="devkey" autocomplete="off" spellcheck="false" placeholder="32 hex digits (sw/dev_key.txt)"><button class="primary small" id="devkey-save" type="submit">Save</button><button class="ghost small" id="devkey-forget" type="button">Forget</button></form>
+            <p class="muted tiny">Opens every star built with this key, whoever owns it. It stays in this browser only and never leaves it: the stars get a one-time answer to their challenge instead. Without it, Star Studio controls the stars paired with this browser.</p>
           </div>
 
           <div class="glass card">

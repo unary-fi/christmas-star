@@ -72,15 +72,30 @@ jobs:
           name: android-reports
           path: android/app/build/reports/
 
+  web:
+    name: Star Studio (browser)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Unit tests (no dependencies)
+        working-directory: pc/web
+        run: node --test tests/
+      - name: Every module parses
+        working-directory: pc/web
+        run: for f in js/*.js star_layout.js; do node --check "$f"; done
+
   python:
-    name: Python tools and Star Studio
+    name: Python tools
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -q pytest pillow xmodem pyserial bleak aiohttp
+      - run: pip install -q pytest pillow xmodem pyserial bleak
       - run: python -m pytest -q pc/tests sw/tools/tests
 
       - name: The app bundles the current firmware version
