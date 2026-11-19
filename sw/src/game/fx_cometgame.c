@@ -118,10 +118,12 @@ static void draw_items(struct led_rgb *frame, const struct comet_game *g, uint32
 		}
 		frame[g->bonus] = color_scale(BONUS, lvl);
 	}
-	uint8_t sw = comet_switch_light(g, &graph);
+	/* The next place to turn: a faint white way off the line, blue once a tap will take it. */
+	bool armed;
+	uint8_t turn = comet_next_turn(g, &graph, &armed);
 
-	if (sw != COMET_NONE) {
-		add(frame, sw, color_scale(SWITCH, 120));
+	if (turn != COMET_NONE) {
+		add(frame, turn, armed ? color_scale(SWITCH, 140) : color_scale(WHITE, 28));
 	}
 }
 

@@ -207,7 +207,7 @@ private fun GameView(g: GameStatus, vm: StarViewModel) {
             when (g.state) {
                 "countdown" -> "Get ready…"
                 "paused" -> "Paused"
-                else -> if (double) "Turn at the next crossing, or flip through the star." else "Turn at the next crossing."
+                else -> if (double) "Turn where the white light shows, or flip through the star." else "Turn where the white light shows."
             },
             style = MaterialTheme.typography.bodyMedium,
             color = if (g.state == "play") StarColors.TextMuted else StarColors.Gold,

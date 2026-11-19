@@ -8,8 +8,9 @@
 #include <string.h>
 
 #define OUTLINE_LEDS 48
-#define INNER_LEDS 18
-#define INNER_TIP_MIN_R 40 /* inner-star tips are at r = 50 mm, the flanks at 30 */
+#define CIRCLE_LEDS 12
+#define PASSAGES 6
+#define PASSAGE_MIN_R 40 /* former inner-star tips are at r = 50 mm, the circle at 30 */
 
 static void link(struct comet_graph *g, uint8_t a, uint8_t b)
 {
@@ -24,55 +25,90 @@ static void link(struct comet_graph *g, uint8_t a, uint8_t b)
 	}
 }
 
+static int32_t dist2(const struct led_info *L, uint8_t a, uint8_t b)
+{
+	int32_t dx = L[a].x - L[b].x;
+	int32_t dy = L[a].y - L[b].y;
+
+	return dx * dx + dy * dy;
+}
+
 void comet_graph_build(struct comet_graph *g, const struct led_info *L)
 {
 	uint8_t outline[OUTLINE_LEDS];
-	uint8_t inner[INNER_LEDS];
+	uint8_t circle[CIRCLE_LEDS];
+	uint8_t tips[PASSAGES];
+	int nc = 0, nt = 0;
 
 	memset(g, 0, sizeof(*g));
 	g->layout = L;
-	memset(outline, COMET_NONE, sizeof(outline));
-	memset(inner, COMET_NONE, sizeof(inner));
+	memset(outline, 0, sizeof(outline));
 	for (uint8_t i = 0; i < LED_FACE_COUNT; i++) {
-		if (L[i].group == LED_GROUP_OUTLINE && L[i].step < OUTLINE_LEDS) {
-			outline[L[i].step] = i;
-		} else if (L[i].group == LED_GROUP_INNER && L[i].step < INNER_LEDS) {
-			inner[L[i].step] = i;
+		if (L[i].group == LED_GROUP_OUTLINE) {
+			g->kind[i] = COMET_OUTLINE;
+			if (L[i].step < OUTLINE_LEDS) {
+				outline[L[i].step] = i;
+			}
+		} else if (L[i].r < PASSAGE_MIN_R) {
+			g->kind[i] = COMET_CIRCLE;
+			if (nc < CIRCLE_LEDS) {
+				circle[nc++] = i;
+			}
+		} else {
+			g->kind[i] = COMET_PASSAGE;
+			if (nt < PASSAGES) {
+				tips[nt++] = i;
+			}
 		}
 	}
 	for (int s = 0; s < OUTLINE_LEDS; s++) {
 		link(g, outline[s], outline[(s + 1) % OUTLINE_LEDS]);
 	}
-	for (int s = 0; s < INNER_LEDS; s++) {
-		link(g, inner[s], inner[(s + 1) % INNER_LEDS]);
-	}
-	/* Spokes: each inner tip to the nearest concave vertex of the outline. */
-	for (int s = 0; s < INNER_LEDS; s++) {
-		uint8_t t = inner[s];
-		uint8_t best = COMET_NONE;
-		int32_t best_d = INT32_MAX;
+	/* The inner circle, in angle order. */
+	for (int a = 1; a < nc; a++) {
+		for (int b = a; b > 0 && L[circle[b]].angle < L[circle[b - 1]].angle; b--) {
+			uint8_t t = circle[b];
 
-		if (L[t].r < INNER_TIP_MIN_R) {
-			continue;
+			circle[b] = circle[b - 1];
+			circle[b - 1] = t;
 		}
-		for (int o = 0; o < OUTLINE_LEDS; o += 8) {
-			uint8_t v = outline[o];
-			int32_t dx = L[v].x - L[t].x;
-			int32_t dy = L[v].y - L[t].y;
-			int32_t d = dx * dx + dy * dy;
+	}
+	for (int s = 0; s < nc; s++) {
+		link(g, circle[s], circle[(s + 1) % nc]);
+	}
+	/* Passages: each tip to the concave vertex outside it and the two circle LEDs flanking it. */
+	for (int t = 0; t < nt; t++) {
+		uint8_t tip = tips[t];
+		uint8_t v = outline[0];
+		uint8_t c1 = circle[0], c2 = circle[1];
 
-			if (d < best_d) {
-				best_d = d;
-				best = v;
+		for (int o = 0; o < OUTLINE_LEDS; o += 8) {
+			if (dist2(L, outline[o], tip) < dist2(L, v, tip)) {
+				v = outline[o];
 			}
 		}
-		link(g, t, best);
+		if (dist2(L, c2, tip) < dist2(L, c1, tip)) {
+			c1 = circle[1];
+			c2 = circle[0];
+		}
+		for (int c = 2; c < nc; c++) {
+			if (dist2(L, circle[c], tip) < dist2(L, c1, tip)) {
+				c2 = c1;
+				c1 = circle[c];
+			} else if (dist2(L, circle[c], tip) < dist2(L, c2, tip)) {
+				c2 = circle[c];
+			}
+		}
+		link(g, tip, v);
+		link(g, tip, c1);
+		link(g, tip, c2);
 	}
 	/* The back face is the same track through the partners. */
 	for (uint8_t i = 0; i < LED_FACE_COUNT; i++) {
 		uint8_t p = L[i].partner;
 
 		g->deg[p] = g->deg[i];
+		g->kind[p] = g->kind[i];
 		for (int k = 0; k < g->deg[i]; k++) {
 			g->nb[p][k] = L[g->nb[i][k]].partner;
 		}
@@ -93,56 +129,109 @@ static int32_t side(const struct comet_graph *g, uint8_t from, uint8_t cur, uint
 	return L[cur].face == LED_FACE_BACK ? -cr : cr;
 }
 
-uint8_t comet_choose(const struct comet_graph *g, uint8_t from, uint8_t cur, uint8_t armed,
-		     bool *used)
+/* Direction of travel around the centre when moving from a to b (front view). */
+static int8_t rot_of(const struct comet_graph *g, uint8_t a, uint8_t b)
 {
 	const struct led_info *L = g->layout;
+	int32_t cr = L[a].x * (L[b].y - L[a].y) - L[a].y * (L[b].x - L[a].x);
+
+	return cr < 0 ? COMET_CW : COMET_CCW;
+}
+
+static bool linked(const struct comet_graph *g, uint8_t a, uint8_t b)
+{
+	for (int k = 0; k < g->deg[a]; k++) {
+		if (g->nb[a][k] == b) {
+			return true;
+		}
+	}
+	return false;
+}
+
+void comet_exits_at(const struct comet_graph *g, uint8_t from, uint8_t cur, int8_t rot,
+		    struct comet_exits *e)
+{
 	uint8_t c[2];
 	int n = 0;
 
-	if (used != NULL) {
-		*used = false;
-	}
+	e->dflt = from;
+	e->alt = COMET_NONE;
+	e->alt_side = 0;
+	e->fork = false;
 	for (int k = 0; k < g->deg[cur]; k++) {
 		if (g->nb[cur][k] != from && n < 2) {
 			c[n++] = g->nb[cur][k];
 		}
 	}
 	if (n == 0) {
-		return from;
+		return;
 	}
+	e->dflt = c[0];
 	if (n == 1) {
-		return c[0];
+		return;
+	}
+
+	uint8_t kf = g->kind[from], kc = g->kind[cur];
+
+	if (kc == COMET_PASSAGE && kf == COMET_CIRCLE) {
+		/* Into a passage from the circle: on out to the outline. */
+		e->dflt = g->kind[c[0]] == COMET_OUTLINE ? c[0] : c[1];
+		return;
+	}
+	if (kc == COMET_CIRCLE && kf == COMET_PASSAGE) {
+		/* Out of a passage onto the circle: on round it, not back under the passage. */
+		e->dflt = linked(g, from, c[0]) ? c[1] : c[0];
+		return;
 	}
 
 	bool c0_left = side(g, from, cur, c[0]) > side(g, from, cur, c[1]);
-	uint8_t left = c0_left ? c[0] : c[1];
-	uint8_t right = c0_left ? c[1] : c[0];
 
-	if (L[from].group == L[cur].group) {
-		/* On a line: follow it unless the turn off it is to the armed side. */
-		uint8_t line = L[c[0]].group == L[cur].group ? c[0] : c[1];
-		uint8_t off = line == c[0] ? c[1] : c[0];
+	if (kf == kc) {
+		/* On a line: follow it; the way off it is the alternative. */
+		uint8_t line = g->kind[c[0]] == kc ? c[0] : c[1];
 
-		if ((armed == COMET_LEFT && off == left) || (armed == COMET_RIGHT && off == right)) {
-			if (used != NULL) {
-				*used = true;
-			}
-			return off;
-		}
-		return line;
+		e->dflt = line;
+		e->alt = line == c[0] ? c[1] : c[0];
+		e->alt_side = (e->alt == c[0]) == c0_left ? COMET_LEFT : COMET_RIGHT;
+		return;
 	}
-	/* Arrived on a spoke: both ways leave the line. */
-	if (armed == COMET_LEFT || armed == COMET_RIGHT) {
+	/* End of a passage: both ways leave it; keep the latest direction of travel. */
+	e->fork = true;
+	e->dflt = rot_of(g, cur, c[0]) == rot ? c[0] : c[1];
+	e->alt = e->dflt == c[0] ? c[1] : c[0];
+	e->alt_side = (e->alt == c[0]) == c0_left ? COMET_LEFT : COMET_RIGHT;
+}
+
+static uint8_t pick(const struct comet_exits *e, uint8_t armed, bool *used)
+{
+	if (used != NULL) {
+		*used = false;
+	}
+	if (e->alt == COMET_NONE || armed == 0) {
+		return e->dflt;
+	}
+	if (armed == e->alt_side) {
 		if (used != NULL) {
 			*used = true;
 		}
-		return armed == COMET_LEFT ? left : right;
+		return e->alt;
 	}
-	/* Clockwise in the front view: position x direction < 0. */
-	int32_t cw = L[cur].x * (L[c[0]].y - L[cur].y) - L[cur].y * (L[c[0]].x - L[cur].x);
+	if (e->fork) {
+		/* At a fork any tap chooses: the other side is the default way. */
+		if (used != NULL) {
+			*used = true;
+		}
+	}
+	return e->dflt;
+}
 
-	return cw < 0 ? c[0] : c[1];
+uint8_t comet_choose(const struct comet_graph *g, uint8_t from, uint8_t cur, int8_t rot,
+		     uint8_t armed, bool *used)
+{
+	struct comet_exits e;
+
+	comet_exits_at(g, from, cur, rot, &e);
+	return pick(&e, armed, used);
 }
 
 static uint32_t rnd(struct comet_game *s)
@@ -180,12 +269,7 @@ static bool free_spot(const struct comet_game *s, const struct comet_graph *g, u
 	if (c == s->spark || c == s->bonus || c == s->next || comet_on_body(s, c)) {
 		return false;
 	}
-	for (int k = 0; k < g->deg[head]; k++) {
-		if (g->nb[head][k] == c) {
-			return false;
-		}
-	}
-	return true;
+	return !linked(g, head, c);
 }
 
 static uint8_t spawn(struct comet_game *s, const struct comet_graph *g)
@@ -234,7 +318,8 @@ void comet_reset(struct comet_game *s, const struct comet_graph *g, uint8_t mode
 	s->head_i = COMET_START_LEN - 1;
 	s->len = COMET_START_LEN;
 	s->from = comet_segment(s, 1);
-	s->next = comet_choose(g, s->from, comet_head(s), 0, NULL);
+	s->rot = rot_of(g, s->from, comet_head(s));
+	s->next = comet_choose(g, s->from, comet_head(s), s->rot, 0, NULL);
 	s->spark = spawn(s, g);
 }
 
@@ -280,11 +365,17 @@ static void step(struct comet_game *s, const struct comet_graph *g)
 		s->next = L[s->next].partner;
 		s->events |= COMET_EV_FLIP;
 	} else {
+		struct comet_exits e;
 		bool used;
 
+		if (g->kind[head] == g->kind[nh] && g->kind[nh] != COMET_PASSAGE) {
+			s->rot = rot_of(g, head, nh);
+		}
 		s->from = head;
-		s->next = comet_choose(g, head, nh, s->armed, &used);
-		if (comet_is_junction(g, nh)) {
+		comet_exits_at(g, head, nh, s->rot, &e);
+		s->next = pick(&e, s->armed, &used);
+		if (e.alt != COMET_NONE) {
+			/* A place to turn: the tap is used here or forgotten. */
 			if (used) {
 				s->events |= COMET_EV_TURN;
 			}
@@ -375,15 +466,20 @@ void comet_input(struct comet_game *s, const struct comet_graph *g, uint8_t inpu
 		return;
 	}
 	s->armed = input;
-	/* A late tap: the head has just reached a junction and not yet left it. */
-	if (comet_is_junction(g, head) && s->phase < 500 && !s->flip) {
+	/* A late tap: the head has just reached a place to turn and not yet left it. */
+	if (s->phase < 500 && !s->flip) {
+		struct comet_exits e;
 		bool used;
-		uint8_t n = comet_choose(g, s->from, head, input, &used);
 
-		if (used) {
-			s->next = n;
-			s->armed = 0;
-			s->events |= COMET_EV_TURN;
+		comet_exits_at(g, s->from, head, s->rot, &e);
+		if (e.alt != COMET_NONE) {
+			uint8_t n = pick(&e, input, &used);
+
+			if (used) {
+				s->next = n;
+				s->armed = 0;
+				s->events |= COMET_EV_TURN;
+			}
 		}
 	}
 }
@@ -400,25 +496,32 @@ void comet_pause(struct comet_game *s, bool pause)
 	}
 }
 
-uint8_t comet_switch_light(const struct comet_game *s, const struct comet_graph *g)
+uint8_t comet_next_turn(const struct comet_game *s, const struct comet_graph *g, bool *armed)
 {
 	uint8_t prev = comet_head(s);
 	uint8_t cur = s->next;
+	int8_t rot = s->rot;
 
-	if (s->armed == 0 || s->state != COMET_PLAY || s->flip) {
+	*armed = false;
+	if ((s->state != COMET_PLAY && s->state != COMET_COUNTDOWN) || s->flip) {
 		return COMET_NONE;
 	}
-	for (int i = 0; i < 12; i++) {
-		if (comet_is_junction(g, cur)) {
+	for (int i = 0; i < 16; i++) {
+		struct comet_exits e;
+
+		comet_exits_at(g, prev, cur, rot, &e);
+		if (e.alt != COMET_NONE) {
 			bool used;
-			uint8_t n = comet_choose(g, prev, cur, s->armed, &used);
+			uint8_t n = pick(&e, s->armed, &used);
 
-			return used ? n : COMET_NONE;
+			*armed = used;
+			return used ? n : e.alt;
 		}
-		uint8_t n = comet_choose(g, prev, cur, 0, NULL);
-
+		if (g->kind[cur] == g->kind[e.dflt] && g->kind[cur] != COMET_PASSAGE) {
+			rot = rot_of(g, cur, e.dflt);
+		}
 		prev = cur;
-		cur = n;
+		cur = e.dflt;
 	}
 	return COMET_NONE;
 }

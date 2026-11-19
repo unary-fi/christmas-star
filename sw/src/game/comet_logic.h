@@ -14,16 +14,18 @@
  * @file comet_logic.h
  * @brief Comet, a snake game on the star's LED lines (hardware independent).
  *
- * The track: each face has two closed rings, the 48-LED outline and the
- * 18-LED inner star. Each inner-star tip points at a concave vertex of the
- * outline; joining them ("spokes") gives 12 junctions per face. Every LED is
+ * The track on each face: the 48-LED outline, the inner circle of the 12
+ * LEDs at r = 30 mm, and six passages between them. A passage is one LED
+ * (a former inner-star tip at r = 50 mm) joined to the outline's concave
+ * vertex outside it and to the two circle LEDs flanking it. Every LED is
  * also linked to its partner at the same XY on the other face, which is how
  * the comet flips through the star in double-sided mode.
  *
- * Steering: a Left or Right tap is used at the next junction, if a turn to
- * that side exists there; otherwise it is dropped. Without a tap the comet
- * follows its own line (and goes clockwise when it arrives on a spoke).
- * Left and right are as seen by a viewer of the face the head is on.
+ * Steering: a Left or Right tap is used at the next place where the comet
+ * can turn, if a turn to that side exists there; otherwise it is dropped.
+ * Without a tap the comet follows its line; at the end of a passage it
+ * keeps its direction of travel (clockwise or counter-clockwise). Left and
+ * right are as seen by a viewer of the face the head is on.
  */
 
 #define COMET_NODES LED_COUNT
@@ -34,8 +36,17 @@
 #define COMET_COUNTDOWN_MS 3000
 #define COMET_BONUS_MS 5000
 #define COMET_SPARKS_PER_LEVEL 5
-#define COMET_SPEED_START 6 /* steps per second at level 1 */
-#define COMET_SPEED_MAX 14
+#define COMET_SPEED_START 3 /* steps per second at level 1 */
+#define COMET_SPEED_MAX 12
+
+/* Node kinds of the track. */
+#define COMET_OUTLINE 0
+#define COMET_CIRCLE 1
+#define COMET_PASSAGE 2
+
+/* Direction of travel around the centre (front view). */
+#define COMET_CW (-1)
+#define COMET_CCW 1
 
 enum comet_mode {
 	COMET_SINGLE = 1, /* front only, mirrored to the back */
@@ -65,11 +76,11 @@ enum comet_input {
 #define COMET_EV_TURN (1u << 5)
 #define COMET_EV_LEVEL (1u << 6)
 
-
 struct comet_graph {
 	const struct led_info *layout;
 	uint8_t nb[COMET_NODES][3];
 	uint8_t deg[COMET_NODES];
+	uint8_t kind[COMET_NODES]; /* COMET_OUTLINE, COMET_CIRCLE or COMET_PASSAGE */
 };
 
 struct comet_game {
@@ -84,6 +95,7 @@ struct comet_game {
 	uint8_t paused_from;
 	uint8_t armed;     /* 0, COMET_LEFT or COMET_RIGHT */
 	bool flip;         /* flip on the next step */
+	int8_t rot;        /* COMET_CW or COMET_CCW: the latest direction of travel */
 	uint8_t spark;
 	uint8_t bonus;     /* COMET_NONE if none */
 	uint8_t level;     /* 1.. */
@@ -97,22 +109,28 @@ struct comet_game {
 	uint32_t rng;
 };
 
+/** The ways on from a node: the default, and the alternative if there is a choice. */
+struct comet_exits {
+	uint8_t dflt;
+	uint8_t alt;      /* COMET_NONE: no choice here */
+	uint8_t alt_side; /* COMET_LEFT or COMET_RIGHT */
+	bool fork;        /* both ways leave the line (end of a passage): any tap chooses */
+};
+
 /** @brief Build the track for both faces from the LED layout. */
 void comet_graph_build(struct comet_graph *g, const struct led_info *layout);
 
-/** @brief True if the node has three track neighbours. */
-static inline bool comet_is_junction(const struct comet_graph *g, uint8_t n)
-{
-	return g->deg[n] == 3;
-}
+/** @brief The ways on from @p cur, arriving from @p from, travelling in direction @p rot. */
+void comet_exits_at(const struct comet_graph *g, uint8_t from, uint8_t cur, int8_t rot,
+		    struct comet_exits *e);
 
 /**
  * @brief Where the comet goes from @p cur, arriving from @p from.
  * @param armed 0, COMET_LEFT or COMET_RIGHT.
  * @param used Set to true if the armed turn was taken (may be NULL).
  */
-uint8_t comet_choose(const struct comet_graph *g, uint8_t from, uint8_t cur, uint8_t armed,
-		     bool *used);
+uint8_t comet_choose(const struct comet_graph *g, uint8_t from, uint8_t cur, int8_t rot,
+		     uint8_t armed, bool *used);
 
 /** @brief Start a new game (countdown). */
 void comet_reset(struct comet_game *s, const struct comet_graph *g, uint8_t mode, uint32_t seed);
@@ -140,7 +158,9 @@ static inline uint8_t comet_head(const struct comet_game *s)
 bool comet_on_body(const struct comet_game *s, uint8_t node);
 
 /**
- * @brief The exit an armed turn will take at the next junction ahead, or
- * COMET_NONE if there is no armed turn or it cannot be used there.
+ * @brief The next place ahead where the comet can turn.
+ * @param armed Set to true if the armed turn will be taken there.
+ * @return The way the comet can turn there (the armed one if it applies), or
+ *         COMET_NONE if there is no such place close ahead.
  */
-uint8_t comet_switch_light(const struct comet_game *s, const struct comet_graph *g);
+uint8_t comet_next_turn(const struct comet_game *s, const struct comet_graph *g, bool *armed);

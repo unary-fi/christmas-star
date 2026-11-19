@@ -244,13 +244,16 @@ A comet runs along the star's lights. Catch the golden sparks to grow (and
 the red ornaments for five points); don't run into your own tail. Every five
 sparks the comet speeds up; at 40 segments the star is full and you win.
 
-- **The track**: each face has two rings of LEDs, the outline and the inner
-  star, joined at the six points where the inner star's tips meet the
-  outline. That makes 12 crossings per face.
+- **The track**: on each face the outline and the inner circle (the 12 LEDs
+  around the centre), joined by six passages: the single LEDs between them,
+  each leading from an inner corner of the outline to the circle.
 - **Steering**: the comet follows its line. Tap *Left* or *Right* and it turns
-  that way at the next crossing, if it can; otherwise the tap is forgotten.
-  A faint blue light shows the turn waiting ahead. Left and right are as you
-  see them on the face the comet is on.
+  that way at the next place where it can, if that turn exists there;
+  otherwise the tap is forgotten. At the end of a passage the comet keeps its
+  direction of travel (clockwise or counter-clockwise) unless you tap the
+  other way. A faint white light shows the next place to turn; it turns blue
+  when your tap will take it. Left and right are as you see them on the face
+  the comet is on.
 - **One side**: the game stays on the front and is mirrored to the back, so
   everyone around the star sees the same game.
 - **Both sides**: *Flip* sends the comet through the star; it carries on in

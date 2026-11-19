@@ -10,8 +10,9 @@ for that version in
 ### Comet, a game on the star
 
 - A comet runs along the star's lights; steer it from the app, catch the
-  golden sparks to grow and don't run into your own tail. The outline and
-  the inner star are joined at 12 crossings per face, where the comet turns.
+  golden sparks to grow and don't run into your own tail. The track is the
+  outline and the inner circle, joined by six passages; a faint white light
+  shows the next place to turn.
 - **One side**: the game is mirrored to the back, so everyone around the star
   sees the same game.
 - **Both sides**: flip the comet through the star at any moment; it keeps

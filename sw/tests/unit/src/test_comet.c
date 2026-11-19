@@ -21,16 +21,6 @@ static uint8_t outline(uint8_t step)
 	return COMET_NONE;
 }
 
-static uint8_t inner(uint8_t step)
-{
-	for (uint8_t i = 0; i < LED_FACE_COUNT; i++) {
-		if (led_layout[i].group == LED_GROUP_INNER && led_layout[i].step == step % 18) {
-			return i;
-		}
-	}
-	return COMET_NONE;
-}
-
 static uint8_t partner(uint8_t n)
 {
 	return led_layout[n].partner;
@@ -46,15 +36,23 @@ static bool linked(uint8_t a, uint8_t b)
 	return false;
 }
 
-/* The inner-star tip joined to an outline node, or COMET_NONE. */
-static uint8_t spoke_of(uint8_t v)
+/* The neighbour of a node of the given kind (the first one). */
+static uint8_t neighbour(uint8_t n, uint8_t kind, uint8_t skip)
 {
-	for (int k = 0; k < g.deg[v]; k++) {
-		if (led_layout[g.nb[v][k]].group != led_layout[v].group) {
-			return g.nb[v][k];
+	for (int k = 0; k < g.deg[n]; k++) {
+		if (g.kind[g.nb[n][k]] == kind && g.nb[n][k] != skip) {
+			return g.nb[n][k];
 		}
 	}
 	return COMET_NONE;
+}
+
+/* Clockwise in the front view going from a to b. */
+static bool clockwise(uint8_t a, uint8_t b)
+{
+	const struct led_info *L = led_layout;
+
+	return L[a].x * (L[b].y - L[a].y) - L[a].y * (L[b].x - L[a].x) < 0;
 }
 
 static void *setup(void)
@@ -93,11 +91,12 @@ static void no_items(struct comet_game *s)
 ZTEST(comet, test_graph)
 {
 	for (int face = 0; face < 2; face++) {
-		int junctions = 0;
+		int junctions = 0, kinds[3] = {0};
 
 		for (int i = face * LED_FACE_COUNT; i < (face + 1) * LED_FACE_COUNT; i++) {
 			zassert_true(g.deg[i] == 2 || g.deg[i] == 3, "node %d deg %d", i, g.deg[i]);
 			junctions += g.deg[i] == 3;
+			kinds[g.kind[i]]++;
 			for (int k = 0; k < g.deg[i]; k++) {
 				uint8_t n = g.nb[i][k];
 
@@ -105,20 +104,44 @@ ZTEST(comet, test_graph)
 				zassert_equal(n / LED_FACE_COUNT, face, "edge %d-%d crosses faces", i, n);
 			}
 		}
-		zassert_equal(junctions, 12, "face %d: %d junctions", face, junctions);
+		zassert_equal(kinds[COMET_OUTLINE], 48);
+		zassert_equal(kinds[COMET_CIRCLE], 12);
+		zassert_equal(kinds[COMET_PASSAGE], 6);
+		/* Concave vertices, passages and every circle LED. */
+		zassert_equal(junctions, 6 + 6 + 12, "face %d: %d junctions", face, junctions);
 	}
-	/* Concave vertices and inner tips are the junctions, joined by spokes. */
+	/* Each passage: one concave vertex outside, two neighbouring circle LEDs inside. */
 	for (int o = 0; o < 48; o += 8) {
 		uint8_t v = outline((uint8_t)o);
-		uint8_t t = spoke_of(v);
+		uint8_t p = neighbour(v, COMET_PASSAGE, COMET_NONE);
 
-		zassert_true(comet_is_junction(&g, v));
-		zassert_not_equal(t, COMET_NONE);
-		zassert_true(led_layout[t].r > 40, "spoke to a flank");
+		zassert_not_equal(p, COMET_NONE);
+		zassert_equal(g.deg[p], 3);
+		uint8_t c1 = neighbour(p, COMET_CIRCLE, COMET_NONE);
+		uint8_t c2 = neighbour(p, COMET_CIRCLE, c1);
+
+		zassert_not_equal(c2, COMET_NONE);
+		zassert_true(linked(c1, c2), "the circle runs under the passage");
+		zassert_equal(neighbour(p, COMET_OUTLINE, COMET_NONE), v);
 	}
+	/* The circle is closed: walking along it comes back after 12 steps. */
+	uint8_t first = neighbour(neighbour(outline(0), COMET_PASSAGE, COMET_NONE), COMET_CIRCLE,
+				  COMET_NONE);
+	uint8_t prev = first, cur = neighbour(first, COMET_CIRCLE, COMET_NONE);
+	int n = 1;
+
+	while (cur != first && n < 20) {
+		uint8_t nx = neighbour(cur, COMET_CIRCLE, prev);
+
+		prev = cur;
+		cur = nx;
+		n++;
+	}
+	zassert_equal(n, 12);
 	/* The back is the same track through the partners. */
 	for (int i = 0; i < LED_FACE_COUNT; i++) {
 		zassert_equal(g.deg[partner(i)], g.deg[i]);
+		zassert_equal(g.kind[partner(i)], g.kind[i]);
 		for (int k = 0; k < g.deg[i]; k++) {
 			zassert_true(linked(partner(i), partner(g.nb[i][k])));
 		}
@@ -129,82 +152,109 @@ ZTEST(comet, test_outer_junction)
 {
 	/* Clockwise along the outline into a concave vertex: the centre is on the right. */
 	uint8_t from = outline(7), v = outline(8), line = outline(9);
-	uint8_t tip = spoke_of(v);
+	uint8_t p = neighbour(v, COMET_PASSAGE, COMET_NONE);
 	bool used;
 
-	zassert_equal(comet_choose(&g, from, v, 0, &used), line);
+	zassert_equal(comet_choose(&g, from, v, COMET_CW, 0, &used), line);
 	zassert_false(used);
-	zassert_equal(comet_choose(&g, from, v, COMET_RIGHT, &used), tip);
+	zassert_equal(comet_choose(&g, from, v, COMET_CW, COMET_RIGHT, &used), p);
 	zassert_true(used);
 	/* No left turn off the line here: follow it, the tap is not used. */
-	zassert_equal(comet_choose(&g, from, v, COMET_LEFT, &used), line);
+	zassert_equal(comet_choose(&g, from, v, COMET_CW, COMET_LEFT, &used), line);
 	zassert_false(used);
 
-	/* Seen from behind, the same move is mirrored: the spoke is on the left. */
-	zassert_equal(comet_choose(&g, partner(from), partner(v), COMET_LEFT, &used), partner(tip));
+	/* Seen from behind, the same move is mirrored: the passage is on the left. */
+	zassert_equal(comet_choose(&g, partner(from), partner(v), COMET_CW, COMET_LEFT, &used),
+		      partner(p));
 	zassert_true(used);
-	zassert_equal(comet_choose(&g, partner(from), partner(v), COMET_RIGHT, &used),
+	zassert_equal(comet_choose(&g, partner(from), partner(v), COMET_CW, COMET_RIGHT, &used),
 		      partner(line));
 	zassert_false(used);
 }
 
-ZTEST(comet, test_inner_tip)
+ZTEST(comet, test_passage)
 {
-	/* Find an inner tip and walk into it clockwise along the inner star. */
-	uint8_t tip = COMET_NONE, before = COMET_NONE, after = COMET_NONE;
-
-	for (uint8_t s = 0; s < 18; s++) {
-		if (led_layout[inner(s)].r > 40) {
-			tip = inner(s);
-			before = inner((uint8_t)(s + 17));
-			after = inner((uint8_t)(s + 1));
-			break;
-		}
-	}
-	zassert_not_equal(tip, COMET_NONE);
-	uint8_t v = spoke_of(tip);
+	uint8_t v = outline(8);
+	uint8_t p = neighbour(v, COMET_PASSAGE, COMET_NONE);
+	uint8_t c1 = neighbour(p, COMET_CIRCLE, COMET_NONE);
+	uint8_t c2 = neighbour(p, COMET_CIRCLE, c1);
+	uint8_t cw = clockwise(p, c1) ? c1 : c2;
+	uint8_t ccw = cw == c1 ? c2 : c1;
 	bool used;
 
-	zassert_equal(comet_choose(&g, before, tip, 0, NULL), after);
-	/* Clockwise on the inner star, the way out is on the left. */
-	zassert_equal(comet_choose(&g, before, tip, COMET_LEFT, &used), v);
-	zassert_true(used);
-	zassert_equal(comet_choose(&g, before, tip, COMET_RIGHT, &used), after);
+	/* Down the passage: the comet keeps its direction of travel ... */
+	zassert_equal(comet_choose(&g, v, p, COMET_CW, 0, &used), cw);
 	zassert_false(used);
-
-	/* In on the spoke: clockwise by default, either way when armed. */
-	zassert_equal(comet_choose(&g, v, tip, 0, NULL), after);
-	uint8_t l = comet_choose(&g, v, tip, COMET_LEFT, &used);
-
-	zassert_true(used);
-	uint8_t r = comet_choose(&g, v, tip, COMET_RIGHT, &used);
+	zassert_equal(comet_choose(&g, v, p, COMET_CCW, 0, NULL), ccw);
+	/* ... or goes the way of a tap, whichever side. */
+	uint8_t l = comet_choose(&g, v, p, COMET_CW, COMET_LEFT, &used);
 
 	zassert_true(used);
-	zassert_true((l == before && r == after) || (l == after && r == before));
+	uint8_t r = comet_choose(&g, v, p, COMET_CW, COMET_RIGHT, &used);
+
+	zassert_true(used);
 	zassert_not_equal(l, r);
+	zassert_true((l == c1 && r == c2) || (l == c2 && r == c1));
+
+	/* Onto the circle: on round it, not back under the passage. */
+	uint8_t on = comet_choose(&g, p, cw, COMET_CW, 0, NULL);
+
+	zassert_equal(g.kind[on], COMET_CIRCLE);
+	zassert_not_equal(on, ccw);
+	zassert_false(linked(on, p));
+
+	/* From the circle into the passage: straight out to the outline. */
+	zassert_equal(comet_choose(&g, c1, p, COMET_CW, COMET_LEFT, NULL), v);
+	zassert_equal(comet_choose(&g, c2, p, COMET_CCW, COMET_RIGHT, NULL), v);
+
+	/* Along the circle past a passage: follow the circle unless turning out. */
+	uint8_t before = neighbour(c1, COMET_CIRCLE, c2);
+	struct comet_exits e;
+
+	comet_exits_at(&g, before, c1, COMET_CW, &e);
+	zassert_equal(e.dflt, c2);
+	zassert_equal(e.alt, p);
+	zassert_false(e.fork);
+	zassert_equal(comet_choose(&g, before, c1, COMET_CW, e.alt_side, &used), p);
+	zassert_true(used);
+	zassert_equal(comet_choose(&g, before, c1, COMET_CW, 3 - e.alt_side, &used), c2);
+	zassert_false(used);
 }
 
 ZTEST(comet, test_turn_at_next_junction)
 {
 	struct comet_game s;
+	bool armed;
 
 	start(&s, COMET_SINGLE, 1);
 	no_items(&s);
-	/* Starts at the top tip (outline 4) going clockwise; the next junction is outline 8. */
+	/* Starts at the top tip (outline 4) going clockwise; the next place to turn is outline 8. */
 	zassert_equal(comet_head(&s), outline(4));
+	uint8_t p = neighbour(outline(8), COMET_PASSAGE, COMET_NONE);
+
+	zassert_equal(comet_next_turn(&s, &g, &armed), p, "shows the way in");
+	zassert_false(armed);
 	comet_input(&s, &g, COMET_RIGHT);
 	zassert_equal(s.armed, COMET_RIGHT);
+	zassert_equal(comet_next_turn(&s, &g, &armed), p);
+	zassert_true(armed);
 	while (comet_head(&s) != outline(8)) {
 		step_once(&s);
 		zassert_equal(s.state, COMET_PLAY);
 	}
-	zassert_equal(s.next, spoke_of(outline(8)));
+	zassert_equal(s.next, p);
 	zassert_equal(s.armed, 0, "used at the junction");
+	/* Down the passage it keeps going clockwise. */
+	step_once(&s);
+	zassert_equal(comet_head(&s), p);
+	zassert_true(clockwise(p, s.next));
 
 	/* A left tap there is dropped: no left turn off the line. */
 	start(&s, COMET_SINGLE, 1);
 	no_items(&s);
 	comet_input(&s, &g, COMET_LEFT);
+	zassert_equal(comet_next_turn(&s, &g, &armed), p);
+	zassert_false(armed);
 	while (comet_head(&s) != outline(8)) {
 		step_once(&s);
 	}
@@ -287,6 +337,7 @@ ZTEST(comet, test_levels_and_tail)
 	struct comet_game s;
 
 	zassert_equal(comet_speed(1), COMET_SPEED_START);
+	zassert_equal(comet_speed(2), COMET_SPEED_START + 1);
 	zassert_equal(comet_speed(100), COMET_SPEED_MAX);
 
 	start(&s, COMET_SINGLE, 7);
