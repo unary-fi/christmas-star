@@ -23,8 +23,9 @@
  *
  * Steering: a Left or Right tap is used at the next place where the comet
  * can turn, if a turn to that side exists there; otherwise it is dropped.
- * Without a tap the comet follows its line; at the end of a passage it
- * keeps its direction of travel (clockwise or counter-clockwise). Left and
+ * Without a tap the comet follows its line; at the end of a passage it turns
+ * to the side of the latest tap (before any tap, it keeps its direction of
+ * travel, clockwise or counter-clockwise). Left and
  * right are as seen by a viewer of the face the head is on.
  */
 
@@ -96,6 +97,7 @@ struct comet_game {
 	uint8_t armed;     /* 0, COMET_LEFT or COMET_RIGHT */
 	bool flip;         /* flip on the next step */
 	int8_t rot;        /* COMET_CW or COMET_CCW: the latest direction of travel */
+	uint8_t last_tap;  /* side of the latest Left/Right tap, 0 if none yet */
 	uint8_t spark;
 	uint8_t bonus;     /* COMET_NONE if none */
 	uint8_t level;     /* 1.. */

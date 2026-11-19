@@ -202,13 +202,20 @@ void comet_exits_at(const struct comet_graph *g, uint8_t from, uint8_t cur, int8
 	e->alt_side = (e->alt == c[0]) == c0_left ? COMET_LEFT : COMET_RIGHT;
 }
 
-static uint8_t pick(const struct comet_exits *e, uint8_t armed, bool *used)
+/*
+ * @param last The side of the latest tap (0 if none yet): at the end of a
+ *        passage, without a new tap, the comet turns that way again.
+ */
+static uint8_t pick(const struct comet_exits *e, uint8_t armed, uint8_t last, bool *used)
 {
 	if (used != NULL) {
 		*used = false;
 	}
-	if (e->alt == COMET_NONE || armed == 0) {
+	if (e->alt == COMET_NONE) {
 		return e->dflt;
+	}
+	if (armed == 0) {
+		return e->fork && last == e->alt_side ? e->alt : e->dflt;
 	}
 	if (armed == e->alt_side) {
 		if (used != NULL) {
@@ -231,7 +238,7 @@ uint8_t comet_choose(const struct comet_graph *g, uint8_t from, uint8_t cur, int
 	struct comet_exits e;
 
 	comet_exits_at(g, from, cur, rot, &e);
-	return pick(&e, armed, used);
+	return pick(&e, armed, 0, used);
 }
 
 static uint32_t rnd(struct comet_game *s)
@@ -373,7 +380,7 @@ static void step(struct comet_game *s, const struct comet_graph *g)
 		}
 		s->from = head;
 		comet_exits_at(g, head, nh, s->rot, &e);
-		s->next = pick(&e, s->armed, &used);
+		s->next = pick(&e, s->armed, s->last_tap, &used);
 		if (e.alt != COMET_NONE) {
 			/* A place to turn: the tap is used here or forgotten. */
 			if (used) {
@@ -466,6 +473,7 @@ void comet_input(struct comet_game *s, const struct comet_graph *g, uint8_t inpu
 		return;
 	}
 	s->armed = input;
+	s->last_tap = input;
 	/* A late tap: the head has just reached a place to turn and not yet left it. */
 	if (s->phase < 500 && !s->flip) {
 		struct comet_exits e;
@@ -473,7 +481,7 @@ void comet_input(struct comet_game *s, const struct comet_graph *g, uint8_t inpu
 
 		comet_exits_at(g, s->from, head, s->rot, &e);
 		if (e.alt != COMET_NONE) {
-			uint8_t n = pick(&e, input, &used);
+			uint8_t n = pick(&e, input, s->last_tap, &used);
 
 			if (used) {
 				s->next = n;
@@ -512,10 +520,11 @@ uint8_t comet_next_turn(const struct comet_game *s, const struct comet_graph *g,
 		comet_exits_at(g, prev, cur, rot, &e);
 		if (e.alt != COMET_NONE) {
 			bool used;
-			uint8_t n = pick(&e, s->armed, &used);
+			uint8_t n = pick(&e, s->armed, s->last_tap, &used);
 
 			*armed = used;
-			return used ? n : e.alt;
+			/* With a tap: where it goes. Without: the way it would not go by itself. */
+			return used ? n : (n == e.alt ? e.dflt : e.alt);
 		}
 		if (g->kind[cur] == g->kind[e.dflt] && g->kind[cur] != COMET_PASSAGE) {
 			rot = rot_of(g, cur, e.dflt);

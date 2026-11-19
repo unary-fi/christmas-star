@@ -249,9 +249,9 @@ sparks the comet speeds up; at 40 segments the star is full and you win.
   each leading from an inner corner of the outline to the circle.
 - **Steering**: the comet follows its line. Tap *Left* or *Right* and it turns
   that way at the next place where it can, if that turn exists there;
-  otherwise the tap is forgotten. At the end of a passage the comet keeps its
-  direction of travel (clockwise or counter-clockwise) unless you tap the
-  other way. A faint white light shows the next place to turn; it turns blue
+  otherwise the tap is forgotten. At the end of a passage the comet turns to
+  the side you tapped last (before your first tap, it keeps its direction of
+  travel). A faint white light shows the next place to turn; it turns blue
   when your tap will take it. Left and right are as you see them on the face
   the comet is on.
 - **One side**: the game stays on the front and is mirrored to the back, so

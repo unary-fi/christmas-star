@@ -244,7 +244,27 @@ ZTEST(comet, test_turn_at_next_junction)
 	}
 	zassert_equal(s.next, p);
 	zassert_equal(s.armed, 0, "used at the junction");
-	/* Down the passage it keeps going clockwise. */
+	/* At the end of the passage it turns right again: the latest tap. */
+	step_once(&s);
+	zassert_equal(comet_head(&s), p);
+	struct comet_exits e;
+
+	comet_exits_at(&g, outline(8), p, s.rot, &e);
+	zassert_true(e.fork);
+	zassert_equal(s.next, e.alt_side == COMET_RIGHT ? e.alt : e.dflt, "turns right");
+
+	/* Without any tap yet, the end of a passage keeps the direction of travel. */
+	start(&s, COMET_SINGLE, 1);
+	no_items(&s);
+	while (comet_head(&s) != outline(7)) {
+		step_once(&s);
+	}
+	s.next = outline(8);
+	s.from = outline(6);
+	while (comet_head(&s) != outline(8)) {
+		step_once(&s);
+	}
+	s.next = p; /* into the passage without a tap */
 	step_once(&s);
 	zassert_equal(comet_head(&s), p);
 	zassert_true(clockwise(p, s.next));
