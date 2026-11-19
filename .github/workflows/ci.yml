@@ -57,8 +57,10 @@ jobs:
           distribution: temurin
           java-version: "17"
           cache: gradle
+          overwrite-settings: false # Gradle 9.8 reuses Maven settings.xml mirrors
       - name: Android SDK platform 37.0
         run: |
+          rm -f ~/.m2/settings.xml
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" > /dev/null
       - name: Build, unit tests and lint

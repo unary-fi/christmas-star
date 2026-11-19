@@ -80,6 +80,7 @@ jobs:
           distribution: temurin
           java-version: "17"
           cache: gradle
+          overwrite-settings: false # Gradle 9.8 reuses Maven settings.xml mirrors
 
       - name: Android upload key
         env:
@@ -94,6 +95,7 @@ jobs:
       - name: Build and test the Android app
         working-directory: android
         run: |
+          rm -f ~/.m2/settings.xml
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" > /dev/null
           bash ./gradlew --no-daemon testDebugUnitTest lintRelease bundleRelease assembleRelease
