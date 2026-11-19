@@ -57,10 +57,10 @@ jobs:
           distribution: temurin
           java-version: "17"
           cache: gradle
-      - name: Android SDK platform 37
+      - name: Android SDK platform 37.0
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37" > /dev/null
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" > /dev/null
       - name: Build, unit tests and lint
         run: bash ./gradlew --no-daemon assembleDebug testDebugUnitTest lintDebug
       - name: Lint and test reports

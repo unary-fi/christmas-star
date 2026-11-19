@@ -95,7 +95,7 @@ jobs:
         working-directory: android
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37" > /dev/null
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" > /dev/null
           bash ./gradlew --no-daemon testDebugUnitTest lintRelease bundleRelease assembleRelease
           cp app/build/outputs/bundle/release/app-release.aab "../dist/christmas-star-app-${{ steps.version.outputs.app }}.aab"
           cp app/build/outputs/apk/release/app-release.apk "../dist/christmas-star-app-${{ steps.version.outputs.app }}.apk"
