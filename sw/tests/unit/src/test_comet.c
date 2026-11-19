@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
+#include <stdlib.h>
 #include <string.h>
 #include <zephyr/ztest.h>
 
@@ -145,6 +146,35 @@ ZTEST(comet, test_graph)
 		for (int k = 0; k < g.deg[i]; k++) {
 			zassert_true(linked(partner(i), partner(g.nb[i][k])));
 		}
+	}
+}
+
+ZTEST(comet, test_back_shows_front_unmirrored)
+{
+	const struct led_info *L = led_layout;
+	int on_axis = 0;
+
+	for (int i = 0; i < LED_FACE_COUNT; i++) {
+		uint8_t m = g.mirror[i];
+
+		zassert_true(m < LED_FACE_COUNT);
+		zassert_equal(g.mirror[m], i, "mirroring twice gives the LED back");
+		zassert_true(abs(L[m].x + L[i].x) <= 1 && abs(L[m].y - L[i].y) <= 1,
+			     "LED %d (%d,%d) -> %d (%d,%d)", i, L[i].x, L[i].y, m, L[m].x, L[m].y);
+		zassert_equal(g.kind[m], g.kind[i], "the mirror image is the same track");
+		on_axis += m == i;
+	}
+	/* Only the top and bottom tips sit on the vertical axis. */
+	zassert_equal(on_axis, 2);
+	/*
+	 * A viewer behind the star sees back LED partner[i] where a viewer in
+	 * front sees front LED mirror[i]: same picture, so a left turn on the
+	 * front is a left turn on the back too.
+	 */
+	for (int i = 0; i < LED_FACE_COUNT; i++) {
+		uint8_t back = partner(i);
+
+		zassert_equal(L[back].x, L[i].x, "partner at the same place");
 	}
 }
 
