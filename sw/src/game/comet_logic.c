@@ -103,6 +103,21 @@ void comet_graph_build(struct comet_graph *g, const struct led_info *L)
 		link(g, tip, c1);
 		link(g, tip, c2);
 	}
+	/* Mirror image of the front: the LED at (-x, y). */
+	for (uint8_t i = 0; i < LED_FACE_COUNT; i++) {
+		int32_t best = INT32_MAX;
+
+		for (uint8_t j = 0; j < LED_FACE_COUNT; j++) {
+			int32_t dx = L[j].x + L[i].x;
+			int32_t dy = L[j].y - L[i].y;
+			int32_t d = dx * dx + dy * dy;
+
+			if (d < best) {
+				best = d;
+				g->mirror[i] = j;
+			}
+		}
+	}
 	/* The back face is the same track through the partners. */
 	for (uint8_t i = 0; i < LED_FACE_COUNT; i++) {
 		uint8_t p = L[i].partner;

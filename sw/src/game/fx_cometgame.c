@@ -194,8 +194,8 @@ static void draw_won(struct led_rgb *frame, uint32_t t)
 static void draw(struct led_rgb *frame, struct cometfx *st, uint32_t t)
 {
 	const struct comet_game *g = &st->g;
-	bool mirror = g->mode == COMET_SINGLE || g->state == COMET_COUNTDOWN ||
-		      g->state == COMET_WON;
+	bool copy_back = g->mode == COMET_SINGLE || g->state == COMET_COUNTDOWN ||
+			 g->state == COMET_WON;
 	uint8_t p = g->state == COMET_PLAY ? (uint8_t)(g->phase * 255U / 1000U) : 0;
 
 	for (int i = 0; i < LED_COUNT; i++) {
@@ -247,9 +247,12 @@ static void draw(struct led_rgb *frame, struct cometfx *st, uint32_t t)
 			frame[i] = color_scale(frame[i], lvl);
 		}
 	}
-	if (mirror) {
+	if (copy_back) {
+		/* The back shows the front's picture as seen from the front (not mirrored),
+		 * so left and right are the same for players on either side.
+		 */
 		for (int i = 0; i < LED_FACE_COUNT; i++) {
-			frame[led_layout[i].partner] = frame[i];
+			frame[led_layout[i].partner] = frame[graph.mirror[i]];
 		}
 	}
 }

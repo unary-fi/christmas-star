@@ -82,6 +82,12 @@ struct comet_graph {
 	uint8_t nb[COMET_NODES][3];
 	uint8_t deg[COMET_NODES];
 	uint8_t kind[COMET_NODES]; /* COMET_OUTLINE, COMET_CIRCLE or COMET_PASSAGE */
+	/*
+	 * Front LED at the mirrored place (-x, y). A one-sided game shows on the
+	 * back as back LED partner[i] = front LED mirror[i], so a viewer behind
+	 * the star sees the same picture as one in front, not its mirror image.
+	 */
+	uint8_t mirror[LED_FACE_COUNT];
 };
 
 struct comet_game {
