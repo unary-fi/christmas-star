@@ -5,6 +5,22 @@ firmware version in `sw/VERSION`; the release workflow publishes the section
 for that version in
 [christmas-star-releases](https://github.com/unary-fi/christmas-star-releases/releases).
 
+## [Unreleased]
+
+### Star Studio in the browser
+
+- Star Studio is now a web page that talks to the stars itself with Web
+  Bluetooth: https://unary-fi.github.io/christmas-star/ in Chrome or Edge, with
+  nothing to install. *Add star* picks a star from the browser's Bluetooth
+  chooser; the developer key is entered on the *Developer* page and stays in
+  the browser. Stars can also be paired with the browser, like a phone.
+- A *Play* page for Comet, like the app's: choose the mode, steer with large
+  Left / Flip / Right buttons or the arrow keys, score and best scores.
+- The *Missing LEDs* card uses the board references (D259, D359), so marking
+  LEDs works again.
+- The Python studio (`pc/star_studio.py`, bleak and aiohttp) is gone; the
+  command-line tools in `sw/tools` stay.
+
 ## [1.6.1] - 2026-11-19
 
 The Comet release: the same content as 1.6.0, whose release build could not

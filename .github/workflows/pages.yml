@@ -1,0 +1,46 @@
+name: Star Studio on GitHub Pages
+
+# Publishes Star Studio (pc/web, a static page that talks to the stars with
+# Web Bluetooth) at https://unary-fi.github.io/christmas-star/ whenever it
+# changes on main.
+
+on:
+  push:
+    branches: [main]
+    paths: ["pc/web/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Unit tests
+        working-directory: pc/web
+        run: node --test
+      - name: The site (without the tests)
+        run: |
+          mkdir -p _site
+          cp -r pc/web/. _site/
+          rm -rf _site/tests _site/package.json
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4
