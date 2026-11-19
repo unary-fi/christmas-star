@@ -5,7 +5,17 @@ firmware version in `sw/VERSION`; the release workflow publishes the section
 for that version in
 [christmas-star-releases](https://github.com/unary-fi/christmas-star-releases/releases).
 
-## [Unreleased]
+## [1.6.2] - 2026-11-19
+
+### Comet
+
+- One-sided games now look the same from behind the star as from the front.
+  The back used to show the mirror image, so Left and Right were swapped for
+  players behind the star.
+
+### Android app 1.1.1
+
+- Carries firmware 1.6.2.
 
 ### Star Studio in the browser
 
