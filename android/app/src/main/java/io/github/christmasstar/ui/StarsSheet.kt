@@ -39,6 +39,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -399,6 +401,9 @@ fun DevKeyDialog(vm: StarViewModel, onDismiss: () -> Unit) {
                     singleLine = true,
                     isError = error,
                     label = { Text("Developer key") },
+                    // A secret: hidden on screen, and kept out of keyboard learning and the clipboard panel.
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = StarColors.Gold,
                         focusedLabelColor = StarColors.Gold,

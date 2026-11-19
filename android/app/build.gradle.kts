@@ -15,8 +15,8 @@ android {
         minSdk = 28
         targetSdk = 37
         // Raise versionCode for every upload to Google Play.
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
     }
 
     // Release signing (the Google Play upload key) from android/keystore.properties,

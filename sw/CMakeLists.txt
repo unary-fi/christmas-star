@@ -68,6 +68,9 @@ target_sources(app PRIVATE
 	src/pair/sha256.c
 	src/pair/pair_logic.c
 	src/pair/pairing.c
+	src/game/comet_logic.c
+	src/game/game.c
+	src/game/fx_cometgame.c
 	src/fw/fw_image.c
 	src/fw/cmd_fw.c
 	src/config/star_settings.c

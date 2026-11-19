@@ -20,7 +20,7 @@ const struct effect *const effects_builtin[] = {
 	&fx_golden, &fx_liquidgold, &fx_snowfall, &fx_shootingstars, &fx_candle,
 	&fx_hearthfrost, &fx_aurora, &fx_candycane, &fx_treelights, &fx_bethlehem,
 	&fx_fireworks, &fx_disco, &fx_frost, &fx_twinkle, &fx_comet, &fx_rainbow,
-	&fx_solid, &fx_off, &fx_manual, &fx_player, &fx_test, NULL,
+	&fx_solid, &fx_off, &fx_manual, &fx_player, &fx_test, &fx_cometgame, NULL,
 };
 
 static K_MUTEX_DEFINE(engine_mutex);
@@ -178,6 +178,7 @@ static void engine_thread(void *a, void *b, void *c)
 	int64_t started = next;
 	uint32_t frames = 0;
 	struct imu_state imu;
+	bool shake = true;
 
 	while (true) {
 		int64_t now = k_uptime_get();
@@ -204,11 +205,14 @@ static void engine_thread(void *a, void *b, void *c)
 			active->render(frame, t, &imu, fx_state);
 			pairing_tick(now, &imu);
 			memcpy(out, frame, sizeof(out));
+			shake = (active->flags & FX_NO_SHAKE) == 0;
 		}
 		k_mutex_unlock(&engine_mutex);
 
 		if (!paused) {
-			shake_overlay_apply(out, (uint32_t)now, &imu);
+			if (shake) {
+				shake_overlay_apply(out, (uint32_t)now, &imu);
+			}
 			pairing_overlay_apply(out, now);
 			fw_progress_overlay(out, now);
 			(void)led_chain_show(out);

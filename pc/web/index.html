@@ -142,6 +142,17 @@
           </div>
 
           <div class="glass card">
+            <div class="card-head"><h2>Comet</h2><div class="segmented small" id="game-mode"><button data-m="single" class="active">One side</button><button data-m="double">Both sides</button></div></div>
+            <pre id="game-status" class="mono small">Not playing.</pre>
+            <div class="row">
+              <button class="primary small" id="game-start">Start</button>
+              <button class="ghost small" id="game-pause">Pause</button>
+              <button class="ghost small" id="game-stop">Stop</button>
+            </div>
+            <p class="muted tiny">Steer with ← → (or A, D), flip through the star with ↑ ↓ (or W, S); Space pauses, Esc stops. The keys work when no text field has the focus. Every selected star plays.</p>
+          </div>
+
+          <div class="glass card">
             <div class="card-head"><h2>Name</h2></div>
             <div class="row"><input type="text" id="rename" maxlength="16" placeholder="e.g. Living room"><span class="counter" id="rename-count">0/16</span><button class="primary small" id="rename-go">Rename</button></div>
             <p class="muted tiny">The new name is what phones and PCs see when they search. Several stars selected: names are numbered (“Kitchen-1”, “Kitchen-2”).</p>

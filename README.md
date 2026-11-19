@@ -45,6 +45,8 @@ with its own board definition (`christmas_star`). The Android app in
   update alone. Previews are cached per firmware version.
 - Shake to drop: shaking knocks lights loose in their current colours, on top
   of any effect, picture or video (`shake on|off`).
+- **Comet**, a game played on the star and steered from the app (see
+  *Comet, the game*).
 - Command line over Bluetooth (BM78), including direct LED control and a
   binary live-stream mode used by the app for photos and videos.
 - One effect at a time in the 2 Gbit NAND (about 655 000 frames, 3.6 h at
@@ -199,6 +201,7 @@ its COM port at 115200 baud instead. Type `help` for all commands.
 | `shake [on\|off]` | Shake to drop lights, for every effect. |
 | `app hello`, `app state`, `stream` | Used by the Android app (state line, binary live frames). |
 | `app effects`, `app preview <id> [frames] [step_ms]` | The effects to offer (`fx <id> <flags> <title>\|<subtitle>`), and a preview clip rendered on the star. |
+| `app game [start single\|double \| l \| r \| f \| pause \| resume \| stop]` | Comet, the game: start, steer (left, right, flip), pause, leave. Without arguments one `game state=... score=... best1=... best2=...` line. |
 | `led missing list\|add\|del\|clear` | LEDs bridged on the board, e.g. `led missing add D259`. |
 | `led test <led\|all>` | Light one LED (e.g. `D232` or logical index 0–131) or walk the chain. |
 | `led brightness [0-255]`, `led limit [mA]` | Global brightness, total current limit. |
@@ -234,6 +237,37 @@ J-Link (RTT) command line is never locked.
 
 The BM78 accepts one connection at a time, so a star connected to Star Studio
 is not available to a phone until the studio disconnects it.
+
+## Comet, the game
+
+A comet runs along the star's lights. Catch the golden sparks to grow (and
+the red ornaments for five points); don't run into your own tail. Every five
+sparks the comet speeds up; at 40 segments the star is full and you win.
+
+- **The track**: on each face the outline and the inner circle (the 12 LEDs
+  around the centre), joined by six passages: the single LEDs between them,
+  each leading from an inner corner of the outline to the circle.
+- **Steering**: the comet follows its line. Tap *Left* or *Right* and it turns
+  that way at the next place where it can, if that turn exists there;
+  otherwise the tap is forgotten. At the end of a passage the comet turns to
+  the side you tapped last (before your first tap, it keeps its direction of
+  travel). A faint white light shows the next place to turn; it turns blue
+  when your tap will take it. Left and right are as you see them on the face
+  the comet is on.
+- **One side**: the game stays on the front and is mirrored to the back, so
+  everyone around the star sees the same game.
+- **Both sides**: *Flip* sends the comet through the star; it carries on in
+  the same direction on the other face. Sparks appear on either face, so walk
+  around the star to find them, and mind your tail when you flip onto it.
+  Sparks count double. A faint glow on the far face shows where the comet is.
+- The app has a *Play* page (firmware 1.6 or later); Star Studio has a Comet
+  card on the Developer page (arrow keys). Leaving the app or losing the
+  Bluetooth link pauses the game; after a minute in pause or game over the
+  star goes back to the effect it showed before. Each mode keeps its best
+  score on the star.
+
+The rules are in `sw/src/game/comet_logic.c` (unit-tested), the drawing in
+`fx_cometgame.c`.
 
 # Star Studio (PC)
 
