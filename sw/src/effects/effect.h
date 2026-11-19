@@ -27,6 +27,8 @@
 #define FX_TILT BIT(1)
 /** The two faces show different pictures. */
 #define FX_TWO_FACES BIT(2)
+/** The shake overlay stays off (e.g. games). */
+#define FX_NO_SHAKE BIT(3)
 
 /** Largest per-effect state (bytes); see struct effect.state_size. */
 #define FX_STATE_MAX 256
@@ -81,6 +83,7 @@ extern const struct effect fx_disco;
 extern const struct effect fx_manual;
 extern const struct effect fx_player;
 extern const struct effect fx_test;
+extern const struct effect fx_cometgame;
 
 const struct effect *effect_find(const char *name);
 

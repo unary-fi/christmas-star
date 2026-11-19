@@ -10,6 +10,7 @@
 #include "bt/bm78_eeprom.h"
 #include "cli/cli_hooks.h"
 #include "imu/lsm6ds.h"
+#include "game/game.h"
 
 #include <zephyr/app_version.h>
 #include <dev_key.h>
@@ -22,7 +23,7 @@
 #include <zephyr/shell/shell.h>
 #include <zephyr/shell/shell_uart.h>
 
-#define APP_PROTO 3
+#define APP_PROTO 4
 #define LINE_MAX 96
 #define FLASH_MS 1200
 #define LINK_POLL_MS 100
@@ -425,6 +426,7 @@ static void bt_manager(void *a, void *b, void *c)
 		bm78_status(&s1, &s2);
 		/* P1_5 low = a central is connected (Link). */
 		if (linked && s1 != 0) {
+			game_link_lost();
 			set_mode(BT_LOCKED);
 		}
 		linked = s1 == 0;

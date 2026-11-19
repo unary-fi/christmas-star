@@ -23,6 +23,7 @@ target_sources(app PRIVATE
 	src/test_supply.c
 	src/test_pair.c
 	src/test_fw.c
+	src/test_comet.c
 	src/stubs.c
 	${APP}/layout/led_layout.c
 	${APP}/layout/led_layout_table.c
@@ -41,4 +42,5 @@ target_sources(app PRIVATE
 	${APP}/pair/pair_logic.c
 	${APP}/bt/bm78_ad.c
 	${APP}/fw/fw_image.c
+	${APP}/game/comet_logic.c
 )

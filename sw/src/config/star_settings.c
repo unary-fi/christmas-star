@@ -124,8 +124,8 @@ static void save_state(struct k_work *work)
 	uint16_t speed = engine_get_speed();
 	uint8_t shake = shake_is_enabled() ? 1 : 0;
 
-	if (fx == &fx_test) {
-		/* The LED test is temporary; keep resuming the previous state. */
+	if (fx == &fx_test || fx == &fx_cometgame) {
+		/* The LED test and the game are temporary; keep resuming the previous state. */
 		return;
 	}
 	if (strcmp(name, saved_fx) != 0 && strlen(name) < FX_NAME_LEN) {

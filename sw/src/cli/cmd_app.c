@@ -17,6 +17,10 @@
  *               frames in the stream format (transfer/stream_frame.h; 66 LEDs
  *               with the back copying the front, or all 132), then
  *               "preview end"
+ *   app game    Comet, the game: "app game start single|double" starts it,
+ *               "app game l|r|f" steers (left, right, flip through the star),
+ *               "app game pause|resume|stop", and "app game" prints one
+ *               "game state=... mode=... face=... score=... ..." line
  *   app bye     echo back on (for humans)
  *   stream      binary live frames (see transfer/stream_frame.h) until an
  *               end frame or 2 s without data
@@ -25,6 +29,7 @@
 #include "cli_hooks.h"
 #include "effects/effect.h"
 #include "effects/shake_overlay.h"
+#include "game/game.h"
 #include "led/led_chain.h"
 #include "pair/pairing.h"
 #include "storage/effect_store.h"
@@ -185,12 +190,62 @@ static int cmd_preview(const struct shell *sh, size_t argc, char **argv)
 	return 0;
 }
 
+/* ---- Comet, the game ---------------------------------------------------------- */
+
+static const char *const game_states[] = {"countdown", "play", "paused", "over", "won"};
+
+static void print_game(const struct shell *sh)
+{
+	struct game_status st;
+
+	game_get_status(&st);
+	shell_print(sh, "game state=%s mode=%s face=%s score=%u level=%u len=%u best1=%u best2=%u",
+		    !st.active ? "off" : st.state < ARRAY_SIZE(game_states) ? game_states[st.state] : "?",
+		    st.mode == COMET_DOUBLE ? "double" : "single",
+		    st.face == LED_FACE_BACK ? "back" : "front", st.score, st.level, st.len,
+		    game_best(COMET_SINGLE), game_best(COMET_DOUBLE));
+}
+
+static int cmd_game(const struct shell *sh, size_t argc, char **argv)
+{
+	const char *op = argc > 1 ? argv[1] : "";
+
+	if (argc < 2) {
+		print_game(sh);
+	} else if (strcmp(op, "l") == 0) {
+		game_input(COMET_LEFT);
+	} else if (strcmp(op, "r") == 0) {
+		game_input(COMET_RIGHT);
+	} else if (strcmp(op, "f") == 0) {
+		game_input(COMET_FLIP);
+	} else if (strcmp(op, "start") == 0 || strcmp(op, "single") == 0 ||
+		   strcmp(op, "double") == 0) {
+		bool dbl = strcmp(op, "double") == 0 || (argc > 2 && strcmp(argv[2], "double") == 0);
+		uint8_t mode = dbl ? COMET_DOUBLE : COMET_SINGLE;
+
+		game_start(mode);
+		shell_print(sh, "game ok mode=%s best=%u", dbl ? "double" : "single", game_best(mode));
+	} else if (strcmp(op, "pause") == 0) {
+		game_pause(true);
+	} else if (strcmp(op, "resume") == 0) {
+		game_pause(false);
+	} else if (strcmp(op, "stop") == 0) {
+		game_stop();
+	} else {
+		shell_error(sh, "unknown: %s", op);
+		return -EINVAL;
+	}
+	return 0;
+}
+
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_app,
 	SHELL_CMD(hello, NULL, "Start an app session (echo off)", cmd_hello),
 	SHELL_CMD(state, NULL, "One-line machine readable state", cmd_state),
 	SHELL_CMD(effects, NULL, "Effects to offer: fx <id> <flags> <title>|<subtitle>", cmd_effects),
 	SHELL_CMD_ARG(preview, NULL, "Preview clip: preview <id> [frames] [step_ms]", cmd_preview, 2,
 		      2),
+	SHELL_CMD_ARG(game, NULL, "Comet: start single|double, l, r, f, pause, resume, stop",
+		      cmd_game, 1, 2),
 	SHELL_CMD(bye, NULL, "End an app session (echo on)", cmd_bye),
 	SHELL_SUBCMD_SET_END);
 
