@@ -33,7 +33,7 @@ jobs:
           node-version: "22"
       - name: Unit tests
         working-directory: pc/web
-        run: node --test tests/
+        run: node --test
       - name: The site (without the tests)
         run: |
           mkdir -p _site

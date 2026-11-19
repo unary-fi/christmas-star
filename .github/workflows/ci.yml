@@ -82,7 +82,7 @@ jobs:
           node-version: "22"
       - name: Unit tests (no dependencies)
         working-directory: pc/web
-        run: node --test tests/
+        run: node --test
       - name: Every module parses
         working-directory: pc/web
         run: for f in js/*.js star_layout.js; do node --check "$f"; done

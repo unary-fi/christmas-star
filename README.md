@@ -302,7 +302,7 @@ tests with Node.js:
 ```powershell
 cd pc\web
 python -m http.server 8000      # then open http://localhost:8000
-node --test tests\
+node --test
 ```
 
 ## Making effects
