@@ -55,6 +55,7 @@
       <button role="tab" data-page="colour" class="tab active">Colour</button>
       <button role="tab" data-page="picture" class="tab">Picture</button>
       <button role="tab" data-page="effects" class="tab">Effects</button>
+      <button role="tab" data-page="play" class="tab">Play</button>
       <button role="tab" data-page="dev" class="tab">Developer</button>
     </nav>
 
@@ -125,6 +126,54 @@
       <div id="effect-grid" class="effect-grid"></div>
     </section>
 
+    <!-- Play: Comet, the game -->
+    <section id="page-play" class="page">
+      <div id="play-choose" class="play-wrap">
+        <h2 class="play-title">Comet</h2>
+        <p class="muted">Steer a comet along the star's lights. Catch the golden sparks to grow — but never run into your own tail.</p>
+        <div class="mode-cards">
+          <button class="glass mode-card active" data-m="single">
+            <span class="mode-head"><b>One side</b><span class="best" id="best-single"></span></span>
+            <span class="muted small">The game stays on the front and shows on the back too: everyone around the star sees the same game.</span>
+          </button>
+          <button class="glass mode-card" data-m="double">
+            <span class="mode-head"><b>Both sides</b><span class="best" id="best-double"></span></span>
+            <span class="muted small">Flip the comet through the star at any moment. Sparks appear on either side — walk around the star to find them. Sparks count double.</span>
+          </button>
+        </div>
+        <button class="primary big" id="game-start">Start</button>
+        <p class="muted tiny" id="play-note"></p>
+      </div>
+
+      <div id="play-game" class="play-wrap" hidden>
+        <div class="scoreboard">
+          <div class="score"><b id="g-score">0</b><span class="label">Score</span></div>
+          <div><b id="g-level">1</b><span class="label">Level</span></div>
+          <div><b id="g-len">3</b><span class="label">Length</span></div>
+          <div id="g-face-box"><b id="g-face">Front</b><span class="label">Comet</span></div>
+        </div>
+        <p class="play-hint" id="g-hint">Get ready…</p>
+        <div class="pads">
+          <button class="pad" data-in="l" aria-label="Left"><svg viewBox="0 0 64 64"><path d="M40 13 21 32l19 19"/></svg><span>Left <kbd>←</kbd></span></button>
+          <button class="pad flip" data-in="f" aria-label="Flip through the star"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="12"/><path d="M32 8v48M22 18l10-10 10 10M22 46l10 10 10-10"/></svg><span>Flip <kbd>↑</kbd><kbd>↓</kbd></span></button>
+          <button class="pad" data-in="r" aria-label="Right"><svg viewBox="0 0 64 64"><path d="M24 13l19 19-19 19"/></svg><span>Right <kbd>→</kbd></span></button>
+        </div>
+        <div class="row play-actions">
+          <button class="ghost" id="game-pause">Pause <kbd>Space</kbd></button>
+          <button class="ghost" id="game-stop">Back to effect <kbd>Esc</kbd></button>
+        </div>
+      </div>
+
+      <div id="play-end" class="play-wrap center" hidden>
+        <h2 class="play-title" id="end-title">Game over</h2>
+        <b class="end-score" id="end-score">0</b>
+        <span class="label">Score</span>
+        <p class="best-line" id="end-best"></p>
+        <button class="primary big" id="game-again">Play again</button>
+        <button class="ghost" id="game-leave">Back to effect</button>
+      </div>
+    </section>
+
     <!-- Developer -->
     <section id="page-dev" class="page">
       <div class="dev-layout">
@@ -146,17 +195,6 @@
             <div class="card-head"><h2>Developer key</h2><span class="muted small" id="devkey-state"></span></div>
             <form class="row" id="devkey-form"><input type="text" name="username" value="developer" autocomplete="username" hidden><input type="password" id="devkey" autocomplete="off" spellcheck="false" placeholder="32 hex digits (sw/dev_key.txt)"><button class="primary small" id="devkey-save" type="submit">Save</button><button class="ghost small" id="devkey-forget" type="button">Forget</button></form>
             <p class="muted tiny">Opens every star built with this key, whoever owns it. It stays in this browser only and never leaves it: the stars get a one-time answer to their challenge instead. Without it, Star Studio controls the stars paired with this browser.</p>
-          </div>
-
-          <div class="glass card">
-            <div class="card-head"><h2>Comet</h2><div class="segmented small" id="game-mode"><button data-m="single" class="active">One side</button><button data-m="double">Both sides</button></div></div>
-            <pre id="game-status" class="mono small">Not playing.</pre>
-            <div class="row">
-              <button class="primary small" id="game-start">Start</button>
-              <button class="ghost small" id="game-pause">Pause</button>
-              <button class="ghost small" id="game-stop">Stop</button>
-            </div>
-            <p class="muted tiny">Steer with ← → (or A, D), flip through the star with ↑ ↓ (or W, S); Space pauses, Esc stops. The keys work when no text field has the focus. Every selected star plays.</p>
           </div>
 
           <div class="glass card">

@@ -214,7 +214,9 @@ $("#shake").onchange = (e) => { if (!syncing) command(e.target.checked ? "shake 
 let page = "colour";
 for (const t of $$(".tab")) {
   t.onclick = () => {
+    if (page === "play" && t.dataset.page !== "play" && ["countdown", "play"].includes(game?.state)) gameCmd("pause");
     page = t.dataset.page;
+    if (page === "play") pollGame();
     $$(".tab").forEach((x) => x.classList.toggle("active", x === t));
     $$(".page").forEach((p) => p.classList.toggle("active", p.id === `page-${page}`));
     if (page !== "picture" && $("#pic-live").checked) { $("#pic-live").checked = false; stopLive(); }
@@ -756,43 +758,108 @@ window.addEventListener("resize", redrawAll);
 
 // ---- Comet, the game ---------------------------------------------------------------------
 
-let gameMode = "single", gameState = "off", gamePoll = null;
-$$("#game-mode button").forEach((b) => (b.onclick = () => {
-  gameMode = b.dataset.m;
-  $$("#game-mode button").forEach((x) => x.classList.toggle("active", x === b));
-}));
+// The star runs the game; this page steers it and shows the status line
+// ("game state=... mode=... face=... score=... level=... len=... best1=... best2=...").
+let gameMode = localStorage.getItem("studio-game-mode") || "single";
+let game = null;
 const gameCmd = (arg) => command(arg ? `app game ${arg}` : "app game", { quiet: true, timeout: 2 });
+const gameRunning = () => ["countdown", "play", "paused"].includes(game?.state);
+
 async function pollGame() {
+  const p = primary();
+  if (!p) { game = null; renderPlay(); return; }
+  if ((p.info?.proto || 0) < 4) { game = { state: "unsupported" }; renderPlay(); return; }
   const [r] = await gameCmd("");
   const m = (r?.text || "").match(/game state=.*/);
   if (!m) return;
-  const kv = Object.fromEntries(m[0].slice(5).trim().split(/\s+/).map((t) => t.split("=")));
-  gameState = kv.state;
-  const both = kv.mode === "double";
-  $("#game-status").textContent = kv.state === "off"
-    ? `Not playing. Best: one side ${kv.best1}, both sides ${kv.best2}.`
-    : `${kv.state}  ·  ${both ? `both sides, comet on the ${kv.face}` : "one side"}\n` +
-      `score ${kv.score}  ·  level ${kv.level}  ·  length ${kv.len}\n` +
-      `best: one side ${kv.best1}, both sides ${kv.best2}`;
-  $("#game-pause").textContent = kv.state === "paused" ? "Resume" : "Pause";
+  const prev = game;
+  game = Object.fromEntries(m[0].slice(5).trim().split(/\s+/).map((t) => t.split("=")));
+  if (prev && Number(game.score) > Number(prev.score) && gameRunning()) flash("#g-score");
+  renderPlay();
 }
-function pollGameSoon() {
-  if (!gamePoll) gamePoll = setInterval(() => { if (page === "dev" && primary()) pollGame(); }, 400);
-  pollGame();
+
+function renderPlay() {
+  const s = game?.state;
+  const choosing = !s || s === "off" || s === "unsupported";
+  $("#play-choose").hidden = !choosing;
+  $("#play-game").hidden = !gameRunning();
+  $("#play-end").hidden = !(s === "over" || s === "won");
+  $$(".mode-card").forEach((c) => c.classList.toggle("active", c.dataset.m === gameMode));
+  const p = primary();
+  $("#game-start").disabled = !p || s === "unsupported";
+  $("#play-note").textContent = !p ? "Select a connected star first."
+    : s === "unsupported" ? "Comet needs firmware 1.6 or later on the star (Developer → Firmware)."
+    : readyTargets().length > 1 ? `${readyTargets().length} stars selected: every one of them plays.` : "";
+  if (!game || s === "unsupported") { $("#best-single").textContent = ""; $("#best-double").textContent = ""; return; }
+  $("#best-single").textContent = Number(game.best1) ? `Best ${game.best1}` : "";
+  $("#best-double").textContent = Number(game.best2) ? `Best ${game.best2}` : "";
+  const both = game.mode === "double";
+  $("#g-score").textContent = game.score;
+  $("#g-level").textContent = game.level;
+  $("#g-len").textContent = game.len;
+  $("#g-face").textContent = game.face === "back" ? "Back" : "Front";
+  $("#g-face-box").hidden = !both;
+  $(".pad.flip").hidden = !both;
+  $("#g-hint").textContent = s === "countdown" ? "Get ready…" : s === "paused" ? "Paused"
+    : both ? "Turn where the white light shows, or flip through the star." : "Turn where the white light shows.";
+  $("#g-hint").classList.toggle("alert", s !== "play");
+  $("#game-pause").firstChild.textContent = s === "paused" ? "Resume " : "Pause ";
+  const best = Number(both ? game.best2 : game.best1), score = Number(game.score);
+  $("#end-title").textContent = s === "won" ? "The star is full of light!" : "Game over";
+  $("#end-score").textContent = game.score;
+  $("#end-best").textContent = score > 0 && score >= best ? "A new best!" : `Best ${best}`;
 }
-$("#game-start").onclick = async () => { await gameCmd(`start ${gameMode}`); pollGameSoon(); };
-$("#game-pause").onclick = () => gameCmd(gameState === "paused" ? "resume" : "pause");
-$("#game-stop").onclick = async () => { await gameCmd("stop"); pollGame(); };
+
+function flash(sel) {
+  const el = $(sel);
+  el.classList.remove("flash");
+  void el.offsetWidth;
+  el.classList.add("flash");
+}
+
+$$(".mode-card").forEach((c) => (c.onclick = () => {
+  gameMode = c.dataset.m;
+  localStorage.setItem("studio-game-mode", gameMode);
+  renderPlay();
+}));
+const startGame = async (mode) => { await gameCmd(`start ${mode}`); pollGame(); };
+$("#game-start").onclick = () => startGame(gameMode);
+$("#game-again").onclick = () => startGame(game?.mode || gameMode);
+const pauseGame = () => gameCmd(game?.state === "paused" ? "resume" : "pause").then(pollGame);
+const leaveGame = () => gameCmd("stop").then(pollGame);
+$("#game-pause").onclick = pauseGame;
+$("#game-stop").onclick = leaveGame;
+$("#game-leave").onclick = leaveGame;
+
+// Steering reacts on press, for the shortest delay.
+function steer(input, pad) {
+  gameCmd(input);
+  if (pad) { pad.classList.add("pressed"); setTimeout(() => pad.classList.remove("pressed"), 140); }
+}
+$$(".pad").forEach((pad) => pad.addEventListener("pointerdown", (e) => { e.preventDefault(); steer(pad.dataset.in, pad); }));
 document.addEventListener("keydown", (e) => {
-  if (page !== "dev" || !["countdown", "play", "paused"].includes(gameState)) return;
+  if (page !== "play" || !gameRunning() || e.repeat) return;
   if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
   const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-  const steer = { ArrowLeft: "l", a: "l", ArrowRight: "r", d: "r", ArrowUp: "f", w: "f", ArrowDown: "f", s: "f" }[key];
-  if (steer) gameCmd(steer);
-  else if (e.key === " ") gameCmd(gameState === "paused" ? "resume" : "pause");
-  else if (e.key === "Escape") gameCmd("stop");
+  const input = { ArrowLeft: "l", a: "l", ArrowRight: "r", d: "r", ArrowUp: "f", w: "f", ArrowDown: "f", s: "f" }[key];
+  if (input) {
+    if (input === "f" && game.mode !== "double") return;
+    steer(input, $(`.pad[data-in="${input}"]`));
+  } else if (e.key === " ") pauseGame();
+  else if (e.key === "Escape") leaveGame();
   else return;
   e.preventDefault();
+});
+
+// Poll often while playing, rarely otherwise; pause when the page is left.
+let polling = false;
+setInterval(async () => {
+  if (page !== "play" || polling) return;
+  polling = true;
+  try { await pollGame(); } finally { polling = false; }
+}, 300);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && ["countdown", "play"].includes(game?.state)) gameCmd("pause");
 });
 
 const startTab = $$(".tab").find((t) => `#${t.dataset.page}` === location.hash);

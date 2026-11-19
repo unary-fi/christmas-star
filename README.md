@@ -261,8 +261,9 @@ sparks the comet speeds up; at 40 segments the star is full and you win.
   the same direction on the other face. Sparks appear on either face, so walk
   around the star to find them, and mind your tail when you flip onto it.
   Sparks count double. A faint glow on the far face shows where the comet is.
-- The app has a *Play* page (firmware 1.6 or later); Star Studio has a Comet
-  card on the Developer page (arrow keys). Leaving the app or losing the
+- The app and Star Studio have a *Play* page (firmware 1.6 or later). In Star
+  Studio, steer with the arrow keys (or A/D, W/S to flip), Space pauses and
+  Esc leaves; every selected star plays. Leaving the app or losing the
   Bluetooth link pauses the game; after a minute in pause or game over the
   star goes back to the effect it showed before. Each mode keeps its best
   score on the star.

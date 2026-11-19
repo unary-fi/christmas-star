@@ -14,6 +14,10 @@ for that version in
   nothing to install. *Add star* picks a star from the browser's Bluetooth
   chooser; the developer key is entered on the *Developer* page and stays in
   the browser. Stars can also be paired with the browser, like a phone.
+- A *Play* page for Comet, like the app's: choose the mode, steer with large
+  Left / Flip / Right buttons or the arrow keys, score and best scores.
+- The *Missing LEDs* card uses the board references (D259, D359), so marking
+  LEDs works again.
 - The Python studio (`pc/star_studio.py`, bleak and aiohttp) is gone; the
   command-line tools in `sw/tools` stay.
 
