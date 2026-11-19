@@ -98,7 +98,16 @@ jobs:
           rm -f ~/.m2/settings.xml
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" > /dev/null
-          bash ./gradlew --no-daemon testDebugUnitTest lintRelease bundleRelease assembleRelease
+          # Maven Central sometimes answers "not found" for an artifact it has
+          # (twice compose-group-mapping on a first release run), so try again
+          # after a pause, asking Gradle to check the dependencies afresh.
+          for attempt in 1 2 3; do
+            refresh=$([ "$attempt" -gt 1 ] && echo --refresh-dependencies || true)
+            bash ./gradlew --no-daemon $refresh testDebugUnitTest lintRelease bundleRelease assembleRelease && break
+            [ "$attempt" -lt 3 ] || exit 1
+            echo "::warning::Android build attempt $attempt failed; retrying in 60 s"
+            sleep 60
+          done
           cp app/build/outputs/bundle/release/app-release.aab "../dist/christmas-star-app-${{ steps.version.outputs.app }}.aab"
           cp app/build/outputs/apk/release/app-release.apk "../dist/christmas-star-app-${{ steps.version.outputs.app }}.apk"
 

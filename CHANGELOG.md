@@ -5,14 +5,18 @@ firmware version in `sw/VERSION`; the release workflow publishes the section
 for that version in
 [christmas-star-releases](https://github.com/unary-fi/christmas-star-releases/releases).
 
-## [1.6.0] - 2026-11-19
+## [1.6.1] - 2026-11-19
+
+The Comet release: the same content as 1.6.0, whose release build could not
+download its dependencies.
 
 ### Comet, a game on the star
 
 - A comet runs along the star's lights; steer it from the app, catch the
   golden sparks to grow and don't run into your own tail. The track is the
   outline and the inner circle, joined by six passages; a faint white light
-  shows the next place to turn.
+  shows the next place to turn. At the end of a passage the comet turns to
+  the side you tapped last.
 - **One side**: the game is mirrored to the back, so everyone around the star
   sees the same game.
 - **Both sides**: flip the comet through the star at any moment; it keeps
@@ -25,11 +29,22 @@ for that version in
 
 - New *Play* page: choose the mode, steer with large Left / Right (and Flip)
   pads, with haptic feedback.
-- Carries firmware 1.6.0 for stars that need the update.
+- The developer key field is masked.
+- Carries firmware 1.6.1 for stars that need the update.
 
 ### Star Studio
 
 - Comet card on the Developer page: play with the arrow keys.
+
+### Build
+
+- The Android build tries Google's Maven Central mirror first, and the
+  release retries the app build: Maven Central rate-limits GitHub's build
+  machines.
+
+## [1.6.0] - 2026-11-19
+
+Tagged but not published; see 1.6.1.
 
 ## [1.5.2] - 2026-11-19
 
