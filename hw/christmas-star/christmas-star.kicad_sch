@@ -1,0 +1,203 @@
+(kicad_sch
+	(version 20231120)
+	(generator "eeschema")
+	(generator_version "8.0")
+	(uuid "20401669-c65d-4574-b1eb-2e0ab0c0175a")
+	(paper "A4")
+	(lib_symbols)
+	(sheet
+		(at 83.82 25.4)
+		(size 50.8 25.4)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "032e30a6-a2fc-4ecb-a49e-1b09e3f0651d")
+		(property "Sheetname" "CHAIN B LEDS 1-66"
+			(at 83.82 24.6884 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "chain_b_leds_1-66.kicad_sch"
+			(at 83.82 51.3846 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "christmas-star"
+				(path "/20401669-c65d-4574-b1eb-2e0ab0c0175a"
+					(page "3")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 25.4 25.4)
+		(size 50.8 25.4)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "7dd62e80-a9d7-4c09-8011-5d6d3bde951a")
+		(property "Sheetname" "CHAIN A LEDS 1-66"
+			(at 25.4 24.6884 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "chain_a_leds_1-66.kicad_sch"
+			(at 25.4 51.3846 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "christmas-star"
+				(path "/20401669-c65d-4574-b1eb-2e0ab0c0175a"
+					(page "2")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 143.51 24.765)
+		(size 48.895 26.035)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "e803068e-0ca5-48e9-85cd-9a9b98ed5ab2")
+		(property "Sheetname" "Communication"
+			(at 143.51 24.0534 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "communication.kicad_sch"
+			(at 143.51 51.3846 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "christmas-star"
+				(path "/20401669-c65d-4574-b1eb-2e0ab0c0175a"
+					(page "5")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 85.09 63.5)
+		(size 48.895 25.4)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "efb7611e-fd32-4ea4-9187-323d3cfbf818")
+		(property "Sheetname" "Power"
+			(at 85.09 62.7884 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "power.kicad_sch"
+			(at 85.09 89.4846 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "christmas-star"
+				(path "/20401669-c65d-4574-b1eb-2e0ab0c0175a"
+					(page "6")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 24.13 63.5)
+		(size 50.8 25.4)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "f15468c7-203b-44ad-a1ce-869eca1e8276")
+		(property "Sheetname" "Controller"
+			(at 24.13 62.7884 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "controller.kicad_sch"
+			(at 24.13 89.4846 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "christmas-star"
+				(path "/20401669-c65d-4574-b1eb-2e0ab0c0175a"
+					(page "4")
+				)
+			)
+		)
+	)
+	(sheet_instances
+		(path "/"
+			(page "1")
+		)
+	)
+)

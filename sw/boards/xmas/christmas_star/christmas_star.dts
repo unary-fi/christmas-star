@@ -1,0 +1,169 @@
+/*
+ * Copyright (c) 2024-2026 Tuomas Terho
+ * SPDX-License-Identifier: MIT
+ *
+ * Christmas Star hardware 1.0
+ * MCU: STM32F030RCT6, 8 MHz HCMOS oscillator (X401) on PF0 (HSE bypass).
+ */
+
+/dts-v1/;
+#include <st/f0/stm32f030Xc.dtsi>
+#include <st/f0/stm32f030rctx-pinctrl.dtsi>
+#include <zephyr/dt-bindings/led/led.h>
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/ {
+	model = "Christmas Star 1.0";
+	compatible = "xmas,christmas-star";
+
+	chosen {
+		zephyr,shell-uart = &usart1;
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+		zephyr,settings-partition = &storage_partition;
+		zephyr,code-partition = &slot0_partition;
+	};
+
+	aliases {
+		led-strip = &led_strip;
+	};
+
+	/* BM78 Bluetooth SPP module (U502) control and status lines. */
+	bm78: bm78 {
+		compatible = "microchip,bm78-ctrl";
+		reset-gpios = <&gpiob 1 GPIO_ACTIVE_LOW>;     /* BT-RESET    -> ~RST    */
+		power-gpios = <&gpiob 2 GPIO_ACTIVE_HIGH>;    /* BT-POWER-ON -> SW_BTN  */
+		p20-gpios = <&gpiob 10 GPIO_ACTIVE_HIGH>;     /* BT-CONF-0   -> P2_0    */
+		p24-gpios = <&gpiob 11 GPIO_ACTIVE_HIGH>;     /* BT-CONF-1   -> P2_4    */
+		ean-gpios = <&gpiob 12 GPIO_ACTIVE_HIGH>;     /* BT-CONF-EAN -> EAN     */
+		status1-gpios = <&gpiob 9 GPIO_ACTIVE_HIGH>;  /* BT-STATUS-1 <- P1_5    */
+		status2-gpios = <&gpiob 8 GPIO_ACTIVE_HIGH>;  /* BT-STATUS-2 <- P0_4    */
+		cts-gpios = <&gpiob 4 GPIO_ACTIVE_LOW>;       /* UART-CTS    -> P1_7 (BM78 CTS input)  */
+		rts-gpios = <&gpiob 3 GPIO_ACTIVE_LOW>;       /* UART-RTS    <- P0_0 (BM78 RTS output) */
+	};
+};
+
+&clk_hse {
+	hse-bypass;
+	clock-frequency = <DT_FREQ_M(8)>;
+	status = "okay";
+};
+
+&pll {
+	prediv = <1>;
+	mul = <6>;
+	clocks = <&clk_hse>;
+	status = "okay";
+};
+
+&rcc {
+	clocks = <&pll>;
+	clock-frequency = <DT_FREQ_M(48)>;
+	ahb-prescaler = <1>;
+	apb1-prescaler = <1>;
+};
+
+/* Unused ports, saves RAM. */
+&gpiod {
+	status = "disabled";
+};
+
+&gpiof {
+	status = "disabled";
+};
+
+/* BM78 serial link (shell + XMODEM). Hardware flow control is not
+ * available on PB3/PB4, so they are driven as GPIOs.
+ */
+&usart1 {
+	pinctrl-0 = <&usart1_tx_pb6 &usart1_rx_pb7>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+	status = "okay";
+};
+
+/* LSM6DS3 / LSM6DSL accelerometer, SA0 tied high -> 0x6B. */
+&i2c1 {
+	pinctrl-0 = <&i2c1_scl_pa9 &i2c1_sda_pa10>;
+	pinctrl-names = "default";
+	clock-frequency = <I2C_BITRATE_FAST>;
+	status = "okay";
+
+	imu: lsm6ds@6b {
+		compatible = "xmas,lsm6ds-accel";
+		reg = <0x6b>;
+	};
+};
+
+/* ZD35Q2GC 2 Gbit SPI NAND (U403). */
+&spi1 {
+	pinctrl-0 = <&spi1_sck_pa5 &spi1_miso_pa6 &spi1_mosi_pa7>;
+	pinctrl-names = "default";
+	cs-gpios = <&gpioa 4 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+	status = "okay";
+
+	nand: nand@0 {
+		compatible = "zetta,zd35-spi-nand";
+		reg = <0>;
+		spi-max-frequency = <DT_FREQ_M(12)>;
+		wp-gpios = <&gpioa 2 GPIO_ACTIVE_LOW>;
+		hold-gpios = <&gpioa 3 GPIO_ACTIVE_LOW>;
+	};
+};
+
+/* LED chain data on PC3 (SPI2 MOSI) -> R501 -> U501 level shifter -> D201.
+ * Driven by the app's own driver (src/led/led_spi_dma.c): SPI2 transmit-only
+ * at 48 MHz / 8 = 6 MHz with DMA1 channel 5, one SPI byte per LED bit:
+ *   0 = 0xC0 -> 0.33 us high, 1 = 0xF8 -> 0.83 us high, 300 us latch.
+ * Zephyr's SPI driver needs full-duplex DMA on the F0 and its RX DMA stalled,
+ * so spi2 and dma1 stay disabled for Zephyr's drivers.
+ * The pin is pulled down so the line idles low.
+ */
+&spi2_mosi_pc3 {
+	slew-rate = "very-high-speed";
+	bias-pull-down;
+};
+
+/ {
+	led_strip: led-strip {
+		compatible = "xmas,led-spi-dma";
+		pinctrl-0 = <&spi2_mosi_pc3>;
+		pinctrl-names = "default";
+		chain-length = <132>;
+	};
+};
+
+&flash0 {
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		/*
+		 * MCUboot (32 KB), two firmware slots (108 KB each: the running
+		 * one and the incoming update, swapped by MCUboot), settings.
+		 */
+		boot_partition: partition@0 {
+			label = "mcuboot";
+			reg = <0x00000000 DT_SIZE_K(32)>;
+		};
+
+		slot0_partition: partition@8000 {
+			label = "image-0";
+			reg = <0x00008000 DT_SIZE_K(108)>;
+		};
+
+		slot1_partition: partition@23000 {
+			label = "image-1";
+			reg = <0x00023000 DT_SIZE_K(108)>;
+		};
+
+		/* Last 8 KB (4 x 2 KB pages) for settings (NVS), same place as
+		 * before the bootloader, so settings survive the change.
+		 */
+		storage_partition: partition@3e000 {
+			label = "storage";
+			reg = <0x0003e000 DT_SIZE_K(8)>;
+		};
+	};
+};

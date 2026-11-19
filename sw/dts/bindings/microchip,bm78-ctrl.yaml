@@ -1,0 +1,35 @@
+# Copyright (c) 2024-2026 Tuomas Terho
+# SPDX-License-Identifier: MIT
+
+description: Control and status lines of a Microchip BM78 Bluetooth SPP module
+
+compatible: "microchip,bm78-ctrl"
+
+properties:
+  reset-gpios:
+    type: phandle-array
+    required: true
+  power-gpios:
+    type: phandle-array
+    required: true
+  p20-gpios:
+    type: phandle-array
+    required: true
+  p24-gpios:
+    type: phandle-array
+    required: true
+  ean-gpios:
+    type: phandle-array
+    required: true
+  status1-gpios:
+    type: phandle-array
+    required: true
+  status2-gpios:
+    type: phandle-array
+    required: true
+  cts-gpios:
+    type: phandle-array
+    description: MCU output driving the module's CTS input (asserted = module may send)
+  rts-gpios:
+    type: phandle-array
+    description: MCU input from the module's RTS output

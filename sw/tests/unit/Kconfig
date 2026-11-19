@@ -1,0 +1,7 @@
+# Settings referenced by the modules under test.
+
+config STAR_DEFAULT_SHAKE_THRESHOLD_MG
+	int
+	default 600
+
+source "Kconfig.zephyr"

@@ -1,0 +1,3 @@
+# Additional devicetree vendor prefixes used by the Christmas Star project.
+xmas	Christmas Star project
+zetta	Zetta Device Technology

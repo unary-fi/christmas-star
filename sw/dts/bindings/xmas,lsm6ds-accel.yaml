@@ -1,0 +1,10 @@
+# Copyright (c) 2024-2026 Tuomas Terho
+# SPDX-License-Identifier: MIT
+
+description: |
+  ST LSM6DS3 / LSM6DSL / LSM6DS3TR-C accelerometer, minimal polled driver
+  (WHO_AM_I 0x69 or 0x6A). Only the accelerometer is used.
+
+compatible: "xmas,lsm6ds-accel"
+
+include: i2c-device.yaml

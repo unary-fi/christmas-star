@@ -1,0 +1,58 @@
+name: Set up Zephyr
+description: >
+  West workspace (Zephyr v4.5 and the modules from sw/west.yml), the Zephyr
+  SDK 1.0.1 with the ARM toolchain and host tools (QEMU), and the Python
+  packages for building, signing (imgtool) and testing (twister).
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Restore the west workspace
+      uses: actions/cache@v4
+      with:
+        path: |
+          .west
+          zephyr
+          modules
+          bootloader
+        key: west-${{ runner.os }}-${{ hashFiles('sw/west.yml') }}
+
+    - name: Restore the Zephyr SDK
+      id: sdk-cache
+      uses: actions/cache@v4
+      with:
+        path: ~/zephyr-sdk-1.0.1
+        key: zephyr-sdk-1.0.1-${{ runner.os }}-arm
+
+    - name: Install the Zephyr SDK
+      if: steps.sdk-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        cd ~
+        wget -q https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v1.0.1/zephyr-sdk-1.0.1_linux-x86_64_minimal.tar.xz
+        tar xf zephyr-sdk-1.0.1_linux-x86_64_minimal.tar.xz
+        rm zephyr-sdk-1.0.1_linux-x86_64_minimal.tar.xz
+        ./zephyr-sdk-1.0.1/setup.sh -t arm-zephyr-eabi -h -c
+
+    - name: Register the SDK with CMake
+      if: steps.sdk-cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: ~/zephyr-sdk-1.0.1/setup.sh -c
+
+    - name: West workspace and Python packages
+      shell: bash
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq --no-install-recommends ninja-build device-tree-compiler
+        pip install -q west
+        [ -d .west ] || west init -l sw
+        west update --narrow -o=--depth=1
+        pip install -q -r zephyr/scripts/requirements-base.txt \
+          -r zephyr/scripts/requirements-build-test.txt \
+          -r zephyr/scripts/requirements-run-test.txt \
+          cryptography intelhex click cbor2
+        echo "ZEPHYR_BASE=$GITHUB_WORKSPACE/zephyr" >> "$GITHUB_ENV"

@@ -1,0 +1,20 @@
+# Copyright (c) 2024-2026 Tuomas Terho
+# SPDX-License-Identifier: MIT
+
+description: Zetta ZD35 series SPI NAND flash (2048 + 128 byte pages, 64 pages per block)
+
+compatible: "zetta,zd35-spi-nand"
+
+include: spi-device.yaml
+
+properties:
+  wp-gpios:
+    type: phandle-array
+    description: Write protect (IO2) line, driven inactive
+  hold-gpios:
+    type: phandle-array
+    description: Hold (IO3) line, driven inactive
+  block-count:
+    type: int
+    default: 2048
+    description: Number of 128 KB erase blocks

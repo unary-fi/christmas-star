@@ -1,0 +1,57 @@
+# Copyright (c) 2024-2026 Tuomas Terho
+# SPDX-License-Identifier: MIT
+
+mainmenu "Christmas Star"
+
+menu "Christmas Star"
+
+config STAR_DEFAULT_MISSING_LEDS
+	string "LEDs missing from the chain by default"
+	default ""
+	help
+	  Space-separated list of LEDs (designators such as D259, or logical
+	  indexes 0..131) whose pads are bridged on this board, so the data
+	  signal skips them (on the first prototype, D259 is bridged). Used
+	  until the list is changed with the "led missing" shell command,
+	  which stores it in settings.
+
+config STAR_FRAME_RATE
+	int "Effect frame rate (frames per second)"
+	range 10 100
+	default 50
+
+config STAR_DEFAULT_BRIGHTNESS
+	int "Default global brightness (0-255)"
+	range 0 255
+	default 128
+
+config STAR_LED_MA_PER_CHANNEL
+	int "Estimated current of one LED colour channel at full scale (mA)"
+	default 12
+	help
+	  Used by the current limiter to estimate the total LED current.
+
+config STAR_DEFAULT_CURRENT_LIMIT_MA
+	int "Default total LED current limit (mA)"
+	default 600
+	help
+	  Frames whose estimated current exceeds this limit are dimmed
+	  proportionally. On hardware 1.0 the 3V3 rail stays in the BM78's
+	  supply range (>= 3.3 V) up to about 550 mA; above that the +5V input
+	  sags and the TPS62056 drops out. The firmware also measures the 3V3
+	  rail every frame and lowers the limit further if it still sags.
+
+config STAR_DEFAULT_SHAKE_THRESHOLD_MG
+	int "Default shake threshold (mg)"
+	default 600
+
+config STAR_NAND_PLANE_SELECT
+	bool "Set the plane select bit in NAND column addresses"
+	default y
+	help
+	  Two-plane SPI NAND devices take the plane (block address bit 0)
+	  in column address bit 12. Single-plane devices ignore the bit.
+
+endmenu
+
+source "Kconfig.zephyr"

@@ -1,0 +1,26 @@
+# Christmas Star firmware workspace (T2 topology: this directory is the
+# manifest repository; the workspace is the repository root).
+#
+#   west init -l sw
+#   west update
+
+manifest:
+  self:
+    path: sw
+
+  remotes:
+    - name: zephyrproject-rtos
+      url-base: https://github.com/zephyrproject-rtos
+
+  projects:
+    - name: zephyr
+      remote: zephyrproject-rtos
+      revision: v4.5.0
+      clone-depth: 1
+      import:
+        name-allowlist:
+          - cmsis
+          - cmsis_6
+          - hal_stm32
+          - segger
+          - mcuboot

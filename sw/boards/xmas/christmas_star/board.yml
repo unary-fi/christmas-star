@@ -1,0 +1,6 @@
+board:
+  name: christmas_star
+  full_name: Christmas Star 1.0
+  vendor: xmas
+  socs:
+    - name: stm32f030xc

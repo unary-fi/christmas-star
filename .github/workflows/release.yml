@@ -1,0 +1,128 @@
+name: Release
+
+# Pushing a tag vX.Y.Z (X.Y.Z = sw/VERSION) builds, tests and signs the
+# firmware and the Android app and publishes them as a release in
+# unary-fi/christmas-star-releases. Only maintainers can push tags, and the
+# secrets live in the "release" environment, which only v* tags may use.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    environment: release
+    env:
+      TAG: ${{ github.ref_name }}
+      STAR_NO_DEV_KEY: "1" # published firmware never contains a developer key
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The tag matches sw/VERSION
+        id: version
+        run: |
+          V=$(sed -nE 's/VERSION_MAJOR = ([0-9]+)/\1/p' sw/VERSION).$(sed -nE 's/VERSION_MINOR = ([0-9]+)/\1/p' sw/VERSION).$(sed -nE 's/PATCHLEVEL = ([0-9]+)/\1/p' sw/VERSION)
+          echo "firmware version $V, tag $TAG"
+          [ "$TAG" = "v$V" ] || { echo "::error::Tag $TAG does not match sw/VERSION ($V)"; exit 1; }
+          echo "fw=$V" >> "$GITHUB_OUTPUT"
+          APP=$(sed -nE 's/ *versionName = "([^"]+)"/\1/p' android/app/build.gradle.kts)
+          echo "app=$APP" >> "$GITHUB_OUTPUT"
+          [ ! -e sw/dev_key.txt ] || { echo "::error::sw/dev_key.txt must not exist in a release build"; exit 1; }
+
+      - uses: ./.github/actions/setup-zephyr
+
+      - name: Firmware signing key
+        env:
+          STAR_SIGNING_KEY: ${{ secrets.STAR_SIGNING_KEY }}
+        run: |
+          [ -n "$STAR_SIGNING_KEY" ] || { echo "::error::Secret STAR_SIGNING_KEY is missing"; exit 1; }
+          printf '%s\n' "$STAR_SIGNING_KEY" > sw/signing_key.pem
+
+      - name: Build firmware (release and debug)
+        run: |
+          west build --sysbuild -b christmas_star sw -d build/star
+          west build --sysbuild -b christmas_star sw -d build/debug -- -DEXTRA_CONF_FILE=debug.conf
+
+      - name: Unit tests (QEMU)
+        run: west twister -T sw/tests -p qemu_cortex_m3 --inline-logs
+
+      - name: Firmware release files
+        run: |
+          mkdir -p dist
+          python - <<'EOF'
+          import os, shutil, sys
+          from intelhex import IntelHex
+          sys.path.insert(0, "pc")
+          import star_protocol as sp
+          v = os.environ["TAG"][1:]
+          for variant, d in (("", "build/star"), ("-debug", "build/debug")):
+              signed = f"{d}/sw/zephyr/zephyr.signed.bin"
+              have = sp.image_version(open(signed, "rb").read())
+              assert have.split("+")[0] == v, (signed, have)
+              shutil.copy(signed, f"dist/christmas-star-fw-{v}{variant}.signed.bin")
+              full = IntelHex(f"{d}/mcuboot/zephyr/zephyr.hex")
+              full.merge(IntelHex(f"{d}/sw/zephyr/zephyr.signed.hex"), overlap="error")
+              full.write_hex_file(f"dist/christmas-star-fw-{v}{variant}-full.hex")
+          EOF
+          # The app carries the release firmware it can install on stars.
+          cp build/star/sw/zephyr/zephyr.signed.bin android/app/src/main/assets/firmware/star-firmware.bin
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Android upload key
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          [ -n "$KEYSTORE_B64" ] && [ -n "$KEYSTORE_PASSWORD" ] || { echo "::error::Android keystore secrets are missing"; exit 1; }
+          echo "$KEYSTORE_B64" | base64 -d > android/upload-keystore.jks
+          printf 'storeFile=upload-keystore.jks\nstorePassword=%s\nkeyAlias=upload\nkeyPassword=%s\n' \
+            "$KEYSTORE_PASSWORD" "$KEYSTORE_PASSWORD" > android/keystore.properties
+
+      - name: Build and test the Android app
+        working-directory: android
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37" > /dev/null
+          bash ./gradlew --no-daemon testDebugUnitTest lintRelease bundleRelease assembleRelease
+          cp app/build/outputs/bundle/release/app-release.aab "../dist/christmas-star-app-${{ steps.version.outputs.app }}.aab"
+          cp app/build/outputs/apk/release/app-release.apk "../dist/christmas-star-app-${{ steps.version.outputs.app }}.apk"
+
+      - name: Checksums and release notes
+        run: |
+          (cd dist && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          V="${TAG#v}"
+          # The CHANGELOG section of this version, up to the next one.
+          awk -v v="$V" '$0 ~ "^## \\[" v "\\]" {on=1; next} on && /^## \[/ {exit} on {print}' CHANGELOG.md > notes.md
+          [ -s notes.md ] || echo "Christmas Star $V." > notes.md
+          printf '\n---\nSource: https://github.com/%s/tree/%s (commit %s)\n' \
+            "$GITHUB_REPOSITORY" "$TAG" "$GITHUB_SHA" >> notes.md
+
+      - name: Publish in christmas-star-releases
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+        run: |
+          [ -n "$GH_TOKEN" ] || { echo "::error::Secret RELEASES_TOKEN is missing"; exit 1; }
+          gh release create "$TAG" dist/* \
+            --repo unary-fi/christmas-star-releases \
+            --title "Christmas Star ${TAG#v}" \
+            --notes-file notes.md
+
+      - name: Keep the files with the run
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: christmas-star-${{ github.ref_name }}
+          path: dist/

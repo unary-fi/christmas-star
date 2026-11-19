@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Star Studio</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2l3.6 9.4H30l-8.3 6.1 3.2 10L16 21.4 7.1 27.5l3.2-10L2 11.4h10.4z' fill='%23F2C14E'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="studio.css">
+</head>
+<body>
+<canvas id="sky" aria-hidden="true"></canvas>
+
+<div class="shell">
+  <aside class="rail">
+    <header class="brand">
+      <svg class="brand-star" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2l3.6 9.4H30l-8.3 6.1 3.2 10L16 21.4 7.1 27.5l3.2-10L2 11.4h10.4z"/></svg>
+      <div>
+        <h1>Star Studio</h1>
+        <p class="muted small">Every star in the room</p>
+      </div>
+    </header>
+
+    <div class="rail-head">
+      <span class="label">Stars nearby</span>
+      <button class="ghost small" id="scan" title="Search again">Search</button>
+    </div>
+    <div id="star-list" class="star-list" role="list"></div>
+    <p id="empty" class="muted small empty">Looking for stars… Make sure they are powered on.</p>
+
+    <footer class="rail-foot">
+      <label class="check"><input type="checkbox" id="select-all"> Select all connected</label>
+      <p id="keyinfo" class="muted tiny"></p>
+    </footer>
+  </aside>
+
+  <main class="main">
+    <header class="topbar glass">
+      <div class="target">
+        <span class="label">Controlling</span>
+        <span id="target-name" class="target-name">No star selected</span>
+      </div>
+      <div class="top-controls">
+        <label class="inline">
+          <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>
+          <input type="range" id="brightness" min="0" max="255" value="128" aria-label="Brightness">
+        </label>
+        <label class="switch" title="Shake the star to knock its lights loose">
+          <input type="checkbox" id="shake"><span class="track"><span class="knob"></span></span> Shake to drop
+        </label>
+      </div>
+    </header>
+
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-page="colour" class="tab active">Colour</button>
+      <button role="tab" data-page="picture" class="tab">Picture</button>
+      <button role="tab" data-page="effects" class="tab">Effects</button>
+      <button role="tab" data-page="dev" class="tab">Developer</button>
+    </nav>
+
+    <!-- Colour -->
+    <section id="page-colour" class="page active">
+      <div class="colour-layout">
+        <div class="glass stage">
+          <div class="faces">
+            <figure><canvas id="colour-front" class="star-canvas"></canvas><figcaption>Front</figcaption></figure>
+            <figure><canvas id="colour-back" class="star-canvas"></canvas><figcaption>Back</figcaption></figure>
+          </div>
+        </div>
+        <div class="glass controls">
+          <div class="segmented" id="face-target">
+            <button data-t="front" class="active">Front</button>
+            <button data-t="both">Both</button>
+            <button data-t="back">Back</button>
+          </div>
+          <div class="sliders">
+            <div class="vslider" data-ch="0"><input type="range" min="0" max="255" value="255" orient="vertical" aria-label="Red"><span>R</span><output>255</output></div>
+            <div class="vslider" data-ch="1"><input type="range" min="0" max="255" value="176" orient="vertical" aria-label="Green"><span>G</span><output>176</output></div>
+            <div class="vslider" data-ch="2"><input type="range" min="0" max="255" value="64" orient="vertical" aria-label="Blue"><span>B</span><output>64</output></div>
+          </div>
+          <div class="presets" id="presets"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Picture -->
+    <section id="page-picture" class="page">
+      <div class="picture-layout">
+        <div class="glass stage picture-stage" id="pic-stage">
+          <canvas id="pic-canvas"></canvas>
+          <div class="drop" id="pic-drop">
+            <svg viewBox="0 0 24 24" class="ico big" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 8"/></svg>
+            <p>Drop a photo or a video here</p>
+            <button class="primary" id="pic-open">Choose a file</button>
+            <input type="file" id="pic-file" accept="image/*,video/*" hidden>
+          </div>
+        </div>
+        <div class="glass controls picture-controls">
+          <p class="muted small">Drag to move, scroll to zoom. The star shows the colours under its LEDs, the same picture on both faces.</p>
+          <label class="switch"><input type="checkbox" id="pic-live"><span class="track"><span class="knob"></span></span> Live on the star</label>
+          <p class="muted tiny" id="pic-fps"></p>
+          <div id="video-controls" hidden>
+            <div class="row"><button class="ghost small" id="vid-play">Pause</button><input type="range" id="vid-seek" min="0" max="1000" value="0" aria-label="Position"></div>
+            <div class="row"><span class="label">Trim</span><input type="number" id="trim-a" min="0" step="0.1" value="0"> – <input type="number" id="trim-b" min="0" step="0.1" value="10"> s</div>
+            <div class="row"><span class="label">Frame rate</span>
+              <div class="segmented small" id="vid-fps"><button data-v="12.5">12.5</button><button data-v="25" class="active">25</button><button data-v="50">50</button></div>
+            </div>
+          </div>
+          <div class="row"><span class="label">Name</span><input type="text" id="pic-name" maxlength="16" value="PC picture"></div>
+          <button class="primary wide" id="pic-keep" disabled>Keep on the star</button>
+          <p class="muted tiny" id="pic-estimate"></p>
+          <button class="ghost small" id="pic-clear" hidden>Choose another file</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Effects -->
+    <section id="page-effects" class="page">
+      <div class="glass speed-bar">
+        <span class="label">Speed</span>
+        <input type="range" id="speed" min="25" max="400" value="100" aria-label="Effect speed">
+        <output id="speed-out">100 %</output>
+        <span class="muted small hint">Shaking works with every effect.</span>
+      </div>
+      <div id="effect-grid" class="effect-grid"></div>
+    </section>
+
+    <!-- Developer -->
+    <section id="page-dev" class="page">
+      <div class="dev-layout">
+        <div class="glass console-card">
+          <div class="card-head"><h2>Console</h2><span class="muted tiny">Commands go to every selected star</span></div>
+          <pre id="console" class="console" aria-live="polite"></pre>
+          <form id="console-form" class="console-input">
+            <span class="prompt">star:~$</span><input id="console-line" autocomplete="off" spellcheck="false" placeholder="help">
+          </form>
+        </div>
+
+        <div class="dev-side">
+          <div class="glass card">
+            <div class="card-head"><h2>Status</h2><button class="ghost small" id="dev-refresh">Refresh</button></div>
+            <pre id="dev-status" class="mono small"></pre>
+          </div>
+
+          <div class="glass card">
+            <div class="card-head"><h2>Name</h2></div>
+            <div class="row"><input type="text" id="rename" maxlength="16" placeholder="e.g. Living room"><span class="counter" id="rename-count">0/16</span><button class="primary small" id="rename-go">Rename</button></div>
+            <p class="muted tiny">The new name is what phones and PCs see when they search. Several stars selected: names are numbered (“Kitchen-1”, “Kitchen-2”).</p>
+          </div>
+
+          <div class="glass card">
+            <div class="card-head"><h2>Pairing</h2></div>
+            <p class="muted small" id="pair-info"></p>
+            <div class="row">
+              <button class="ghost small" id="pair-open">Open pairing window</button>
+              <button class="ghost small danger" id="pair-release">Release from owner</button>
+            </div>
+          </div>
+
+          <div class="glass card">
+            <div class="card-head"><h2>Missing LEDs</h2><div class="segmented small" id="miss-face"><button data-f="1" class="active">Front</button><button data-f="2">Back</button></div></div>
+            <canvas id="miss-canvas" class="star-canvas small-star"></canvas>
+            <p class="muted tiny">Click an LED to mark it missing (bridged or faulty) or to bring it back.</p>
+          </div>
+
+          <div class="glass card">
+            <div class="card-head"><h2>Firmware</h2><span class="muted small" id="fw-version"></span></div>
+            <div class="row"><input type="file" id="fw-file" accept=".bin"><button class="primary small" id="fw-go">Update</button></div>
+            <label class="check"><input type="checkbox" id="fw-permanent"> Permanent (no automatic rollback)</label>
+            <p class="muted tiny">Use <code>zephyr.signed.bin</code> from a build. Selected stars are updated one at a time; each restarts and comes back in about 20 s. A new firmware that fails within its first 20 s is rolled back at the next restart. Needs the BOOT0 pull-down.</p>
+          </div>
+
+          <div class="glass card">
+            <div class="card-head"><h2>Effect file</h2></div>
+            <div class="row"><input type="file" id="csfx-file" accept=".csfx"><button class="primary small" id="csfx-go">Upload</button></div>
+            <div class="row"><span class="label">Current limit</span><input type="number" id="limit" min="100" max="10000" step="50" value="600"> mA <button class="ghost small" id="limit-go">Set</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="progress" class="glass progress" hidden><span id="progress-text"></span><div class="bar"><div id="progress-bar"></div></div></div>
+<div id="toasts" class="toasts" aria-live="polite"></div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

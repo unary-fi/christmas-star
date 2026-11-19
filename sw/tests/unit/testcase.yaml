@@ -1,0 +1,8 @@
+tests:
+  star.unit:
+    platform_allow:
+      - qemu_cortex_m3
+      - native_sim
+    integration_platforms:
+      - qemu_cortex_m3
+    tags: star

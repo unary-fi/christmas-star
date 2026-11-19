@@ -1,0 +1,8 @@
+# The firmware repository as a Zephyr module, so every image of a sysbuild
+# (the application and the MCUboot bootloader) finds the christmas_star board
+# and its devicetree bindings.
+name: christmas-star
+build:
+  settings:
+    board_root: .
+    dts_root: .

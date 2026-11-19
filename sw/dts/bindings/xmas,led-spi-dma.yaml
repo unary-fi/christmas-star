@@ -1,0 +1,17 @@
+# Copyright (c) 2024-2026 Tuomas Terho
+# SPDX-License-Identifier: MIT
+
+description: |
+  WS2812-compatible LED chain driven by STM32 SPI2 in transmit-only mode with
+  DMA1 channel 5 (Christmas Star). The node only carries the pin
+  configuration and chain length; the driver programs SPI2 and the DMA
+  directly, so the spi2 and dma1 nodes stay disabled.
+
+compatible: "xmas,led-spi-dma"
+
+include: pinctrl-device.yaml
+
+properties:
+  chain-length:
+    type: int
+    required: true
