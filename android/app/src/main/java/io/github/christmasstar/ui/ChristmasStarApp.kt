@@ -64,6 +64,7 @@ enum class Page(val title: String, val glyph: Glyph) {
     Manual("Colour", Glyph.Sliders),
     Picture("Picture", Glyph.Picture),
     Effects("Effects", Glyph.Sparkle),
+    Play("Play", Glyph.Comet),
 }
 
 private val permissions: Array<String> =
@@ -126,6 +127,7 @@ fun ChristmasStarApp(vm: StarViewModel = viewModel()) {
                             Page.Manual -> ManualScreen(vm)
                             Page.Picture -> PictureScreen(vm)
                             Page.Effects -> EffectsScreen(vm)
+                            Page.Play -> PlayScreen(vm)
                         }
                     }
                 }

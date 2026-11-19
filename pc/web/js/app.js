@@ -735,6 +735,47 @@ function loop(now) {
 }
 window.addEventListener("resize", redrawAll);
 
+// ---- Comet, the game ---------------------------------------------------------------------
+
+let gameMode = "single", gameState = "off", gamePoll = null;
+$$("#game-mode button").forEach((b) => (b.onclick = () => {
+  gameMode = b.dataset.m;
+  $$("#game-mode button").forEach((x) => x.classList.toggle("active", x === b));
+}));
+const gameCmd = (arg) => command(arg ? `app game ${arg}` : "app game", { quiet: true, timeout: 2 });
+async function pollGame() {
+  const [r] = await gameCmd("");
+  const m = (r?.text || "").match(/game state=.*/);
+  if (!m) return;
+  const kv = Object.fromEntries(m[0].slice(5).trim().split(/\s+/).map((t) => t.split("=")));
+  gameState = kv.state;
+  const both = kv.mode === "double";
+  $("#game-status").textContent = kv.state === "off"
+    ? `Not playing. Best: one side ${kv.best1}, both sides ${kv.best2}.`
+    : `${kv.state}  ·  ${both ? `both sides, comet on the ${kv.face}` : "one side"}\n` +
+      `score ${kv.score}  ·  level ${kv.level}  ·  length ${kv.len}\n` +
+      `best: one side ${kv.best1}, both sides ${kv.best2}`;
+  $("#game-pause").textContent = kv.state === "paused" ? "Resume" : "Pause";
+}
+function pollGameSoon() {
+  if (!gamePoll) gamePoll = setInterval(() => { if (page === "dev" && primary()) pollGame(); }, 400);
+  pollGame();
+}
+$("#game-start").onclick = async () => { await gameCmd(`start ${gameMode}`); pollGameSoon(); };
+$("#game-pause").onclick = () => gameCmd(gameState === "paused" ? "resume" : "pause");
+$("#game-stop").onclick = async () => { await gameCmd("stop"); pollGame(); };
+document.addEventListener("keydown", (e) => {
+  if (page !== "dev" || !["countdown", "play", "paused"].includes(gameState)) return;
+  if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  const steer = { ArrowLeft: "l", a: "l", ArrowRight: "r", d: "r", ArrowUp: "f", w: "f", ArrowDown: "f", s: "f" }[key];
+  if (steer) gameCmd(steer);
+  else if (e.key === " ") gameCmd(gameState === "paused" ? "resume" : "pause");
+  else if (e.key === "Escape") gameCmd("stop");
+  else return;
+  e.preventDefault();
+});
+
 const startTab = $$(".tab").find((t) => `#${t.dataset.page}` === location.hash);
 if (startTab) startTab.click();
 startSky($("#sky"));

@@ -169,7 +169,7 @@ fun <T> Segmented(options: List<Pair<T, String>>, selected: T, onSelect: (T) -> 
 
 // ---- Small line glyphs (no icon library needed) ----------------------------------
 
-enum class Glyph { Sliders, Picture, Sparkle, Star, Play, Pause, Sun, Shake, Bluetooth, Upload }
+enum class Glyph { Sliders, Picture, Sparkle, Star, Play, Pause, Sun, Shake, Bluetooth, Upload, Comet }
 
 @Composable
 fun GlyphIcon(glyph: Glyph, tint: Color, modifier: Modifier = Modifier) {
@@ -232,6 +232,13 @@ private fun DrawScope.drawGlyph(g: Glyph, c: Color) {
             moveTo(w * 0.3f, h * 0.32f); lineTo(w * 0.7f, h * 0.68f); lineTo(w * 0.5f, h * 0.86f)
             lineTo(w * 0.5f, h * 0.14f); lineTo(w * 0.7f, h * 0.32f); lineTo(w * 0.3f, h * 0.68f)
         }, c, style = s)
+        Glyph.Comet -> {
+            // A bright head with a fading tail behind it.
+            drawCircle(c, w * 0.13f, Offset(w * 0.7f, h * 0.3f))
+            drawLine(c, Offset(w * 0.6f, h * 0.4f), Offset(w * 0.16f, h * 0.84f), s.width, StrokeCap.Round)
+            drawLine(c.copy(alpha = c.alpha * 0.6f), Offset(w * 0.5f, h * 0.26f), Offset(w * 0.22f, h * 0.54f), s.width, StrokeCap.Round)
+            drawLine(c.copy(alpha = c.alpha * 0.6f), Offset(w * 0.74f, h * 0.5f), Offset(w * 0.46f, h * 0.78f), s.width, StrokeCap.Round)
+        }
         Glyph.Upload -> {
             drawLine(c, Offset(w / 2, h * 0.7f), Offset(w / 2, h * 0.18f), s.width, StrokeCap.Round)
             drawPath(Path().apply {

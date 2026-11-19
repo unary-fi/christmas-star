@@ -10,6 +10,8 @@ import io.github.christmasstar.effects.EFFECTS
 import io.github.christmasstar.effects.EffectInfo
 import io.github.christmasstar.protocol.EffectCatalog
 import io.github.christmasstar.protocol.Firmware
+import io.github.christmasstar.protocol.GameMode
+import io.github.christmasstar.protocol.GameStatus
 import io.github.christmasstar.protocol.PreviewClip
 import io.github.christmasstar.protocol.Pairing
 import io.github.christmasstar.protocol.StarClient
@@ -103,6 +105,9 @@ class StarViewModel(app: Application) : AndroidViewModel(app) {
     val clips: StateFlow<Map<String, PreviewClip>> = _clips.asStateFlow()
     private var starFw = ""
     private var starProto = 1
+    private val _proto = MutableStateFlow(1)
+    /** Protocol of the connected star (4+ can play Comet). */
+    val proto: StateFlow<Int> = _proto.asStateFlow()
     private var clipJob: Job? = null
     @Volatile private var lastUserAction = 0L
 
@@ -300,6 +305,7 @@ class StarViewModel(app: Application) : AndroidViewModel(app) {
                 _access.value = r.access
                 _starName.value = r.hello.name
                 _starFirmware.value = r.hello.fw
+                _proto.value = r.hello.proto
                 if (r.hello.fw != starFw || r.hello.proto != starProto) {
                     starFw = r.hello.fw
                     starProto = r.hello.proto
@@ -499,6 +505,46 @@ class StarViewModel(app: Application) : AndroidViewModel(app) {
         if (ready) client.send("effect play $id")
     }
 
+
+    // ---- Comet, the game ------------------------------------------------------------
+    // Protocol 4+ (firmware 1.6+). The star runs the game; the app steers it and
+    // polls its status line.
+    private val _game = MutableStateFlow<GameStatus?>(null)
+    val game: StateFlow<GameStatus?> = _game.asStateFlow()
+
+    fun startGame(mode: GameMode) {
+        userAction()
+        if (!ready) return
+        viewModelScope.launch {
+            runCatching { client.command("app game start ${mode.id}") }
+            pollGame()
+        }
+    }
+
+    /** "l", "r" or "f" (flip): sent at once, without waiting for an answer. */
+    fun steer(input: String) {
+        if (ready) client.send("app game $input")
+    }
+
+    fun pauseGame(pause: Boolean) {
+        if (ready) client.send(if (pause) "app game pause" else "app game resume")
+    }
+
+    /** Leave the game; the star goes back to the effect it showed before. */
+    fun stopGame() {
+        if (!ready) return
+        viewModelScope.launch {
+            runCatching { client.command("app game stop") }
+            pollGame()
+            refresh()
+        }
+    }
+
+    suspend fun pollGame() {
+        if (!ready || _proto.value < 4) return
+        val raw = runCatching { client.raw("app game", "game state=", 1500) }.getOrNull() ?: return
+        GameStatus.parse(String(raw, Charsets.ISO_8859_1))?.let { _game.value = it }
+    }
     // ---- Live picture / video ---------------------------------------------------
 
     /** Stream 66 front colours (back copies front); null stops. */
