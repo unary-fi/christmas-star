@@ -578,9 +578,10 @@ async function loadMissing() {
   missing = new Set((r?.text.match(/D\d{3}/g) || []));
   drawMissing();
 }
+/** Board reference of an LED: D2xx on the front (top layer), D3xx on the back. */
 function designatorOf(frontIndex) {
   const i = missFace === 1 ? frontIndex : StarLayout.partner[frontIndex];
-  return `D${StarLayout.designator[i]}`;
+  return `D${missFace === 1 ? 2 : 3}${String(StarLayout.designator[i]).padStart(2, "0")}`;
 }
 function drawMissing() {
   const [ctx, w, h] = fitCanvas($("#miss-canvas"));
