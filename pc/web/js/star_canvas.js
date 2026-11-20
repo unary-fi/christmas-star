@@ -55,6 +55,31 @@ function lighten(c) {
   return (ch((c >> 16) & 255) << 16) | (ch((c >> 8) & 255) << 8) | ch(c & 255);
 }
 
+// A soft glow per colour, drawn once and reused: building a radial gradient for
+// every LED on every frame kept a CPU core busy. Colours are kept to 5 bits per
+// channel, which the eye cannot tell apart in a glow.
+const glowCache = new Map();
+const SPRITE = 64;
+function glowSprite(c) {
+  const key = (((c >> 19) & 31) << 10) | (((c >> 11) & 31) << 5) | ((c >> 3) & 31);
+  let s = glowCache.get(key);
+  if (!s) {
+    if (glowCache.size > 2048) glowCache.clear();
+    const q = (((key >> 10) & 31) << 19) | (((key >> 5) & 31) << 11) | ((key & 31) << 3);
+    s = typeof OffscreenCanvas !== "undefined" ? new OffscreenCanvas(SPRITE, SPRITE) : Object.assign(document.createElement("canvas"), { width: SPRITE, height: SPRITE });
+    const sc = s.getContext("2d");
+    const r = SPRITE / 2;
+    const grad = sc.createRadialGradient(r, r, 0, r, r, r);
+    grad.addColorStop(0, rgbCss(q, 0.55));
+    grad.addColorStop(0.5, rgbCss(q, 0.18));
+    grad.addColorStop(1, rgbCss(q, 0));
+    sc.fillStyle = grad;
+    sc.fillRect(0, 0, SPRITE, SPRITE);
+    glowCache.set(key, s);
+  }
+  return s;
+}
+
 /**
  * The star as on the PCB: board outline in thin gold lines and softly glowing LEDs.
  * colors: 66 front colours (0xRRGGBB) or null; opts: {outline, glow, marks:Set, extent}
@@ -85,22 +110,17 @@ export function drawStar(ctx, w, h, colors, opts = {}) {
 
   const dot = g.pxPerMm * 2.2;
   ctx.globalCompositeOperation = "lighter";
+  ctx.globalAlpha = Math.min(1, glow);
   for (let i = 0; i < StarLayout.FACE_LEDS; i++) {
     const c = colors ? colors[i] : 0;
     const lum = (0.299 * ((c >> 16) & 255) + 0.587 * ((c >> 8) & 255) + 0.114 * (c & 255)) / 255;
     if (lum > 0.02 && glow > 0) {
       const [x, y] = g.led(i);
       const radius = dot * (2.8 + 2.2 * lum) * glow;
-      const grad = ctx.createRadialGradient(x, y, 0, x, y, radius);
-      grad.addColorStop(0, rgbCss(c, 0.55 * glow));
-      grad.addColorStop(0.5, rgbCss(c, 0.18 * glow));
-      grad.addColorStop(1, rgbCss(c, 0));
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.drawImage(glowSprite(c), x - radius, y - radius, 2 * radius, 2 * radius);
     }
   }
+  ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = "source-over";
   for (let i = 0; i < StarLayout.FACE_LEDS; i++) {
     const c = colors ? colors[i] : 0;
@@ -139,7 +159,13 @@ export function startSky(canvas) {
     x: rnd(), y: rnd(), r: 0.5 + rnd() * rnd() * 1.3, phase: rnd() * Math.PI * 2,
     speed: 0.4 + rnd() * 0.8, bright: 0.15 + rnd() * 0.45,
   }));
+  // The twinkle is slow: ten frames a second look the same and cost far less
+  // than redrawing the whole window at the display's rate.
+  let last = -1e9;
   const frame = (t) => {
+    requestAnimationFrame(frame);
+    if (t - last < 100) return;
+    last = t;
     const [ctx, w, h] = fitCanvas(canvas);
     ctx.clearRect(0, 0, w, h);
     const time = t / 1000 * (2 * Math.PI * 10 / 60);
@@ -150,7 +176,6 @@ export function startSky(canvas) {
       ctx.arc(s.x * w, s.y * h, s.r, 0, Math.PI * 2);
       ctx.fill();
     }
-    requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
 }

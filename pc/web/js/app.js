@@ -294,7 +294,7 @@ function loadFile(file) {
     pic.video = isVideo;
     pic.w = isVideo ? el.videoWidth : el.naturalWidth;
     pic.h = isVideo ? el.videoHeight : el.naturalHeight;
-    pic.scale = 1; pic.ox = 0; pic.oy = 0;
+    pic.scale = 1; pic.ox = 0; pic.oy = 0; pic.dirty = true;
     $("#pic-drop").hidden = true;
     $("#pic-clear").hidden = false;
     $("#pic-keep").disabled = false;
@@ -316,6 +316,7 @@ $("#pic-file").onchange = (e) => loadFile(e.target.files[0]);
 $("#pic-clear").onclick = () => {
   if (pic.video) pic.el.pause();
   pic.el = null;
+  pic.dirty = true;
   $("#pic-drop").hidden = false;
   $("#pic-clear").hidden = true;
   $("#pic-keep").disabled = true;
@@ -337,12 +338,14 @@ stage.addEventListener("pointermove", (e) => {
   if (!drag) return;
   pic.ox = drag.ox + e.clientX - drag.x;
   pic.oy = drag.oy + e.clientY - drag.y;
+  pic.dirty = true;
 });
 stage.addEventListener("pointerup", () => { drag = null; stage.classList.remove("dragging"); });
 stage.addEventListener("wheel", (e) => {
   if (!pic.el) return;
   e.preventDefault();
   pic.scale = Math.max(0.2, Math.min(12, pic.scale * Math.exp(-e.deltaY * 0.0015)));
+  pic.dirty = true;
 }, { passive: false });
 
 $("#vid-play").onclick = () => {
@@ -509,6 +512,8 @@ function buildEffects() {
   $("#effect-grid").dataset.key = key;
   $("#effect-grid").innerHTML = "";
   previews.length = 0;
+  cardWatcher.disconnect();
+  onScreen.clear();
   for (const e of items) {
     const card = document.createElement("button");
     card.className = "effect-card";
@@ -521,6 +526,7 @@ function buildEffects() {
       $$(".effect-card").forEach((c) => c.classList.toggle("active", c === card));
     };
     $("#effect-grid").appendChild(card);
+    cardWatcher.observe(card.querySelector("canvas"));
     previews.push({
       id: e.id,
       canvas: card.querySelector("canvas"),
@@ -723,19 +729,37 @@ function toast(level, text) {
 // ---- drawing loop ----------------------------------------------------------------------
 
 function redrawAll() {
+  pic.dirty = true;
   if (page === "colour") drawColour();
   if (page === "effects") buildEffects();
   if (page === "dev") { drawMissing(); loadMissing(); }
 }
+// Redrawing is throttled: the star's clips change every 50-100 ms and the live
+// stream sends at most 20 frames/s, so 25 frames/s is plenty, and a full-rate
+// loop with dozens of glowing stars would keep a CPU core busy.
+const FRAME_MS = 40;
+let lastDraw = 0;
+
+// Only the effect cards on screen are drawn.
+const onScreen = new Set();
+const cardWatcher = new IntersectionObserver((entries) => {
+  for (const e of entries) e.isIntersecting ? onScreen.add(e.target) : onScreen.delete(e.target);
+});
+
 function loop(now) {
+  requestAnimationFrame(loop);
+  if (now - lastDraw < FRAME_MS) return;
+  lastDraw = now;
   const speed = Number($("#speed").value);
   effectTime += (now - lastFrame) * speed / 100;
   lastFrame = now;
-  if (page === "picture") drawPicture();
+  // A still picture is drawn when it changes; a video at the throttled rate.
+  if (page === "picture" && (pic.dirty || (pic.video && pic.el))) { pic.dirty = false; drawPicture(); }
   if (page === "effects") {
     buildEffects();
     const fw = primary()?.info?.fw || "0";
     for (const p of previews) {
+      if (!onScreen.has(p.canvas)) continue;
       const [ctx, w, h] = fitCanvas(p.canvas);
       ctx.clearRect(0, 0, w, h);
       // The star's own clip when it has arrived; else the built-in preview,
@@ -752,7 +776,6 @@ function loop(now) {
       }
     }
   }
-  requestAnimationFrame(loop);
 }
 window.addEventListener("resize", redrawAll);
 

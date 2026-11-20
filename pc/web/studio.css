@@ -50,10 +50,11 @@ h2 { font-size: 21px; color: var(--gold-soft); }
 [hidden] { display: none !important; }
 
 .glass {
-  background: var(--glass);
+  background: linear-gradient(var(--glass), var(--glass)), rgba(11, 17, 41, 0.55);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  backdrop-filter: blur(14px);
+  /* No backdrop blur: behind the panels the sky twinkles, and re-blurring
+     every panel on each sky frame kept a CPU core busy. */
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
