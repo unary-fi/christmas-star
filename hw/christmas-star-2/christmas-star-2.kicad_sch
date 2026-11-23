@@ -1,0 +1,127 @@
+(kicad_sch
+	(version 20231120)
+	(generator "eeschema")
+	(generator_version "8.0")
+	(uuid "20401669-c65d-4574-b1eb-2e0ab0c0175a")
+	(paper "A4")
+	(lib_symbols)
+	(sheet
+		(at 83.82 25.4)
+		(size 50.8 25.4)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "032e30a6-a2fc-4ecb-a49e-1b09e3f0651d")
+		(property "Sheetname" "CHAIN B LEDS 1-66"
+			(at 83.82 24.6884 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "chain_b_leds_1-66.kicad_sch"
+			(at 83.82 51.3846 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "christmas-star-2"
+				(path "/20401669-c65d-4574-b1eb-2e0ab0c0175a"
+					(page "3")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 25.4 25.4)
+		(size 50.8 25.4)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "7dd62e80-a9d7-4c09-8011-5d6d3bde951a")
+		(property "Sheetname" "CHAIN A LEDS 1-66"
+			(at 25.4 24.6884 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "chain_a_leds_1-66.kicad_sch"
+			(at 25.4 51.3846 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "christmas-star-2"
+				(path "/20401669-c65d-4574-b1eb-2e0ab0c0175a"
+					(page "2")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 25.40 76.20)
+		(size 50.8 25.4)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "c5aaeece-9087-45c7-a5f7-4d467aa323f7")
+		(property "Sheetname" "Power"
+			(at 25.40 75.49 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "power.kicad_sch"
+			(at 25.40 102.18 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "christmas-star-2"
+				(path "/20401669-c65d-4574-b1eb-2e0ab0c0175a"
+					(page "4")
+				)
+			)
+		)
+	)
+	(sheet_instances
+		(path "/"
+			(page "1")
+		)
+	)
+)
