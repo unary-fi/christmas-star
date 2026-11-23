@@ -119,6 +119,44 @@
 			)
 		)
 	)
+	(sheet
+		(at 83.82 76.20)
+		(size 50.8 25.4)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "66b8d660-7b2f-4a63-9eca-3bc6f2c13b2e")
+		(property "Sheetname" "ESP32-C6"
+			(at 83.82 75.49 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "module.kicad_sch"
+			(at 83.82 102.18 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "christmas-star-2"
+				(path "/20401669-c65d-4574-b1eb-2e0ab0c0175a"
+					(page "5")
+				)
+			)
+		)
+	)
 	(sheet_instances
 		(path "/"
 			(page "1")

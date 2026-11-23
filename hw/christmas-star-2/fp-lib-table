@@ -1,0 +1,4 @@
+(fp_lib_table
+	(version 7)
+	(lib (name "christmas-star-2")(type "KiCad")(uri "${KIPRJMOD}/christmas-star-2.pretty")(options "")(descr "Christmas Star hardware 2.0 footprints"))
+)

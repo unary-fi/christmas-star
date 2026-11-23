@@ -205,6 +205,8 @@ class Sheet:
                 if spot in done:
                     continue
                 done.add(spot)
+                if net == "NC" and et == "no_connect":
+                    continue  # already "not connected" by its type
                 self.attach(net, ex, ey, ang)
         missing = [p for p in pins if p[0] not in nets and p[1] not in nets]
         if missing:

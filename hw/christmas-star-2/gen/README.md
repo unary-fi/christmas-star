@@ -8,6 +8,8 @@ Once a sheet has been edited in KiCad, **KiCad is the master**: running its
 script again would overwrite the edits.
 
 ```sh
+python gen/build_esp.py .                       # ESP32-C6-WROOM-1 symbol + footprint
 python gen/power_sheet.py power.kicad_sch <root uuid> <power sheet uuid>
+python gen/module_sheet.py module.kicad_sch <root uuid> <module sheet uuid>
 kicad-cli sch erc christmas-star-2.kicad_sch
 ```
